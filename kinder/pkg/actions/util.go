@@ -82,9 +82,11 @@ func postInit(kctx *kcluster.KContext, kn *kcluster.KNode, flags kcluster.Action
 	}
 	*/
 
-	if err := waitNewControlPlaneNodeReady(kctx, kn, flags); err != nil {
-		return err
-	}
+	/*
+		if err := waitNewControlPlaneNodeReady(kctx, kn, flags); err != nil {
+			return err
+		}
+	*/
 
 	fmt.Printf(
 		"Cluster creation complete. You can now use the cluster with:\n\n"+

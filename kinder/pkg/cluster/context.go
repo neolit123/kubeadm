@@ -19,6 +19,7 @@ package cluster
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"sigs.k8s.io/kind/pkg/cluster/constants"
@@ -207,6 +208,7 @@ type ActionFlags struct {
 	UpgradeVersion *version.Version
 	CopyCerts      bool
 	Wait           time.Duration
+	Parallel       bool
 }
 
 // Do actions on kubernetes-in-docker cluster
@@ -221,24 +223,49 @@ func (c *KContext) Do(actions []string, flags ActionFlags, onlyNode string) erro
 		return err
 	}
 
-	// Executes all the selected action
+	// Run in serial mode
+	if !flags.Parallel {
+		// Executes all the selected action
+		for _, plannedTask := range executionPlan {
+			if onlyNode != "" {
+				onlyNodeName := fmt.Sprintf("%s-%s", c.Name(), onlyNode)
+				if !strings.EqualFold(onlyNodeName, plannedTask.Node.Name()) {
+					continue
+				}
+			}
+
+			fmt.Printf("[%s] %s\n\n", plannedTask.Node.Name(), plannedTask.Task.Description)
+			err := plannedTask.Task.Run(c, plannedTask.Node, flags)
+			if err != nil {
+				// in case of error, the execution plan is halted
+				log.Error(err)
+				return err
+			}
+		}
+		return nil
+	}
+	// Run in parallel mode
+	var waitgroup sync.WaitGroup
 	for _, plannedTask := range executionPlan {
+		pt := plannedTask
 		if onlyNode != "" {
 			onlyNodeName := fmt.Sprintf("%s-%s", c.Name(), onlyNode)
-			if !strings.EqualFold(onlyNodeName, plannedTask.Node.Name()) {
+			if !strings.EqualFold(onlyNodeName, pt.Node.Name()) {
 				continue
 			}
 		}
 
-		fmt.Printf("[%s] %s\n\n", plannedTask.Node.Name(), plannedTask.Task.Description)
-		err := plannedTask.Task.Run(c, plannedTask.Node, flags)
-		if err != nil {
-			// in case of error, the execution plan is halted
-			log.Error(err)
-			return err
-		}
+		fmt.Printf("[%s] %s\n\n", pt.Node.Name(), pt.Task.Description)
+		waitgroup.Add(1)
+		go func() {
+			defer waitgroup.Done()
+			if err := pt.Task.Run(c, pt.Node, flags); err != nil {
+				// TODO: collect errors
+				log.Error(err)
+			}
+		}()
 	}
-
+	waitgroup.Wait()
 	return nil
 }
 

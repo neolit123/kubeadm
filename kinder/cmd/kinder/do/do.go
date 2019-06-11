@@ -37,6 +37,7 @@ type flagpole struct {
 	UpgradeVersion string
 	CopyCerts      bool
 	Wait           time.Duration
+	Parallel       bool
 }
 
 // NewCommand returns a new cobra.Command for exec
@@ -62,6 +63,7 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().StringVar(&flags.UpgradeVersion, "upgrade-version", "", "defines the target upgrade version (it should match the version of upgrades binaries)")
 	cmd.Flags().BoolVar(&flags.CopyCerts, "automatic-copy-certs", false, "use automatic copy certs instead of manual copy certs when joining new control-plane nodes")
 	cmd.Flags().DurationVar(&flags.Wait, "wait", time.Duration(5*time.Minute), "Wait for cluster state to converge after action")
+	cmd.Flags().BoolVar(&flags.Parallel, "parallel", false, "Run tasks in parallel on the target nodes")
 	return cmd
 }
 
@@ -70,6 +72,7 @@ func runE(flags *flagpole, cmd *cobra.Command, args []string) error {
 		UsePhases: flags.UsePhases,
 		CopyCerts: flags.CopyCerts,
 		Wait:      flags.Wait,
+		Parallel:  flags.Parallel,
 	}
 
 	//TODO: upgrade version mandatory for updates
