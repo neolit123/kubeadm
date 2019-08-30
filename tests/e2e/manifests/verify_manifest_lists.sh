@@ -35,8 +35,8 @@ curl -sS "https://raw.githubusercontent.com/kubernetes/apimachinery/master/pkg/u
 curl -sS "https://raw.githubusercontent.com/kubernetes/apimachinery/master/pkg/util/version/version.go" > "version.go"
 popd
 
-# set GOPATH to the local directory
-export GOPATH=`readlink -e ./`
+# enable go modules
+export GOMODULE=on
 
 # run unit tests
 go test -v ./$VERSION_PATH/version.go ./$VERSION_PATH/version_test.go
