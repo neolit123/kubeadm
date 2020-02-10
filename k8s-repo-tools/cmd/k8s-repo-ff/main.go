@@ -68,9 +68,23 @@ func main() {
 
 	// Create an HTTP client and process the data.
 	pkg.NewClient(&d, nil)
-	_, err := process(&d)
+	_, _, err := process(&d)
 	if err != nil {
+		// Handle non-fatal errors.
+		if _, ok := err.(releaseBranchError); ok {
+			pkg.Errorf(err.Error())
+			goto done
+		}
+		if _, ok := err.(fastForwardWindowError); ok {
+			pkg.Errorf(err.Error())
+			goto done
+		}
+		if _, ok := err.(identicalBranchesError); ok {
+			pkg.Errorf(err.Error())
+			goto done
+		}
 		pkg.PrintErrorAndExit(err)
 	}
+done:
 	pkg.Logf("done!")
 }

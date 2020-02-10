@@ -17,7 +17,6 @@ limitations under the License.
 package pkg
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -136,9 +135,7 @@ func GitHubCompareBranches(d *Data, repo, base, head string) (*github.CommitsCom
 // GitHubMergeBranch merges head into the base branch and creates a merge commit.
 // TODO: add fake transport
 // https://github.com/google/go-github/blob/60d040d2dafa18fa3e86cbf22fbc3208ef9ef1e0/github/repos_merging.go#L25
-func GitHubMergeBranch(d *Data, repo, base, head string) (*github.RepositoryCommit, *github.Response, error) {
-	commitMessage := fmt.Sprintf("Merge branch %q into %q", head, base)
-
+func GitHubMergeBranch(d *Data, repo, base, head, commitMessage string) (*github.RepositoryCommit, *github.Response, error) {
 	// return fake results on dry-run
 	if d.DryRun {
 		Logf("%s: would create a merge commit in repository %q", PrefixDryRun, repo)

@@ -28,18 +28,18 @@ import (
 
 // process is responsible for all operations that the application performs,
 // such as, getting references and writing new ones.
-func process(d *pkg.Data) ([]*github.Reference, error) {
+func process(d *pkg.Data) (*github.Reference, *github.RepositoryCommit, error) {
 
 	pkg.Logf("using branch prefix %q", d.PrefixBranch)
 
 	// Obtain destination repository tags and branches.
 	tagsDest, err := pkg.GitHubGetTags(d, d.Dest)
 	if err != nil {
-		return nil, err
+		return nil, nil, &genericError{error: err}
 	}
 	branchesDest, err := pkg.GitHubGetBranches(d, d.Dest)
 	if err != nil {
-		return nil, err
+		return nil, nil, &genericError{error: err}
 	}
 
 	// Trim branches and tags that are not usable.
@@ -49,9 +49,7 @@ func process(d *pkg.Data) ([]*github.Reference, error) {
 	// Find the latest versioned branch.
 	latestBranch, err := pkg.FindLatestBranch(branchesDest, d.PrefixBranch)
 	if err != nil {
-		// Don't return an error if there are no versioned branches, yet.
-		pkg.Errorf(err.Error())
-		return nil, nil
+		return nil, nil, &releaseBranchError{error: err}
 	}
 	pkg.Logf("found %q as the latest versioned branch", latestBranch.GetRef())
 
@@ -59,7 +57,7 @@ func process(d *pkg.Data) ([]*github.Reference, error) {
 	latestBranchVer, _ := pkg.BranchRefToVersion(latestBranch, d.PrefixBranch)
 	latestTag, err := pkg.FindLatestTag(tagsDest, latestBranchVer)
 	if err != nil {
-		return nil, err
+		return nil, nil, &genericError{error: err}
 	}
 	pkg.Logf("found %q as the latest versioned tag for branch %q", latestTag.GetRef(), latestBranch.GetRef())
 
@@ -79,28 +77,30 @@ func process(d *pkg.Data) ([]*github.Reference, error) {
 	if !(latestTagVer.AtLeast(minVersion) && latestTagVer.LessThan(maxVersion)) {
 		pkg.Logf("the latest versioned tag %q for branch %q not fall withing the fast-forward window: %s <= VER < %s",
 			latestTag.GetRef(), latestBranch, minVersion.String(), maxVersion.String())
-		return nil, nil
+		return nil, nil, &fastForwardWindowError{error: err}
 	}
 
 	// Compare the latest and the master branches.
 	cmp, err := pkg.GitHubCompareBranches(d, d.Dest, latestBranch.GetRef(), pkg.BranchMaster)
 	if err != nil {
-		return nil, err
+		return nil, nil, &genericError{error: err}
 	}
 	switch cmp.GetStatus() {
 	case "ahead":
 		break
 	case "identical":
 		pkg.Logf("the branches %q and %q are identical", pkg.BranchMaster, latestBranch.GetRef())
-		return nil, nil
+		return nil, nil, &identicalBranchesError{error: err}
 	default:
-		return nil, errors.Errorf("got unhandled status %q comparing branches %q and %q. "+
+		return nil, nil, &genericError{error: errors.Errorf("got unhandled status %q comparing branches %q and %q. "+
 			"Please check the state of the repository!",
-			cmp.GetStatus(), pkg.BranchMaster, latestBranch.GetRef())
+			cmp.GetStatus(), pkg.BranchMaster, latestBranch.GetRef()),
+		}
 	}
 	if len(cmp.Commits) == 0 { // Should not happen.
-		return nil, errors.Errorf("branch %q was reported with status %q, but there are no new commits",
-			pkg.BranchMaster, cmp.GetStatus())
+		return nil, nil, &genericError{error: errors.Errorf("branch %q was reported with status %q, but there are no new commits",
+			pkg.BranchMaster, cmp.GetStatus()),
+		}
 	}
 
 	pkg.Logf("branch %q is ahead of %q by %d commits",
@@ -124,27 +124,33 @@ func process(d *pkg.Data) ([]*github.Reference, error) {
 	promptMessage = fmt.Sprintf("Do you want to fast-forward branch %q of repository %q?",
 		latestBranch.GetRef(), d.Dest)
 	if yes, err = pkg.ShowPrompt(promptMessage); err != nil {
-		return nil, err
+		return nil, nil, &genericError{error: err}
 	} else if yes {
 		goto write
 	}
-	return nil, nil
+	return nil, nil, nil
 
 write:
 	// Merge the branches.
-	commit, resp, err := pkg.GitHubMergeBranch(d, d.Dest, latestBranch.GetRef(), pkg.BranchMaster)
+	commitMessage := formatCommitMessage(latestBranch.GetRef(), pkg.BranchMaster)
+	commit, resp, err := pkg.GitHubMergeBranch(d, d.Dest, latestBranch.GetRef(), pkg.BranchMaster, commitMessage)
 	if err != nil {
-		return nil, err
+		return nil, nil, &genericError{error: err}
 	}
 	mergeStatus := resp.StatusCode
 	switch mergeStatus {
 	case http.StatusCreated:
 		break
 	default:
-		return nil, errors.Errorf("unexpected status %d when merging branch %q into %q. "+
+		return nil, nil, &genericError{error: errors.Errorf("unexpected status %d when merging branch %q into %q. "+
 			"Please verify if the branch is mergeable!",
-			mergeStatus, pkg.BranchMaster, latestBranch.GetRef())
+			mergeStatus, pkg.BranchMaster, latestBranch.GetRef()),
+		}
 	}
 	pkg.Logf("created commit with SHA %q in repository %q", commit.GetSHA(), d.Dest)
-	return nil, nil
+	return latestBranch, commit, nil
+}
+
+func formatCommitMessage(base, head string) string {
+	return fmt.Sprintf("Merge branch %q into %q", head, base)
 }

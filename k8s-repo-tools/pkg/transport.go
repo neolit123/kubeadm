@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"github.com/google/go-github/v29/github"
@@ -83,8 +84,7 @@ func NewClient(d *Data, t *Transport) {
 	d.client = github.NewClient(httpClient)
 }
 
-// NewReferenceHandler creates a HTTPHandler function a list of GitHub References
-// using a map of HTTP method errors.
+// NewReferenceHandler creates a HTTPHandler function that manages a list of GitHub References.
 func NewReferenceHandler(refs *[]*github.Reference, methodErrors map[string]bool) HTTPHandler {
 	return func(req *http.Request) (*http.Response, error) {
 
@@ -163,6 +163,105 @@ func NewReferenceHandler(refs *[]*github.Reference, methodErrors map[string]bool
 			return &http.Response{
 				StatusCode: http.StatusOK, // Note: this status is not 200 for some operations.
 				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte{})),
+				Header:     http.Header{},
+			}, nil
+
+		default:
+			panic(fmt.Sprintf("unhandled HTTP method %q", req.Method))
+		}
+	}
+}
+
+// NewCompareHandler creates a HTTPHandler function that manages RepositoryCommit comparison between
+// two GitHub branches.
+func NewCompareHandler(commitsA, commitsB *[]*github.RepositoryCommit, methodErrors map[string]bool) HTTPHandler {
+	return func(req *http.Request) (*http.Response, error) {
+
+		// Return an early error if methodErrors matches the Method of this http.Request.
+		if val, ok := methodErrors[req.Method]; ok && val {
+			msg := fmt.Sprintf("simulating error for method %q to URL %q", req.Method, req.URL.String())
+			Logf(msg)
+			return nil, errors.New(msg)
+		}
+
+		switch req.Method {
+		case http.MethodGet: // Handle GET
+
+			var cmp *github.CommitsComparison
+			if reflect.DeepEqual(commitsA, commitsB) {
+				// Branches are identical.
+				cmp = &github.CommitsComparison{
+					Status: github.String("identical"),
+				}
+			} else {
+				// Check if branch is ahead. No commit comparison, only length.
+				if len(*commitsA) > len(*commitsB) {
+					// Grab the extra commits from A.
+					var commits []github.RepositoryCommit
+					for i := len(*commitsB) - 1; i < len(*commitsA); i++ {
+						commits = append(commits, *(*commitsA)[i])
+					}
+					cmp = &github.CommitsComparison{
+						Status:  github.String("ahead"),
+						Commits: commits,
+					}
+				} else {
+					cmp = &github.CommitsComparison{
+						Status: github.String("behind"),
+					}
+				}
+			}
+
+			buf, err := json.Marshal(cmp)
+			if err != nil {
+				return nil, err
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBuffer(buf)),
+				Header:     http.Header{},
+			}, nil
+
+		default:
+			panic(fmt.Sprintf("unhandled HTTP method %q", req.Method))
+		}
+	}
+}
+
+// NewMergeHandler creates a HTTPHandler function that manages a list of GitHub References
+// using a map of HTTP method errors.
+func NewMergeHandler(mergeRequest *github.RepositoryMergeRequest, status int, methodErrors map[string]bool) HTTPHandler {
+	return func(req *http.Request) (*http.Response, error) {
+
+		// Return an early error if methodErrors matches the Method of this http.Request.
+		if val, ok := methodErrors[req.Method]; ok && val {
+			msg := fmt.Sprintf("simulating error for method %q to URL %q", req.Method, req.URL.String())
+			Logf(msg)
+			return nil, errors.New(msg)
+		}
+
+		switch req.Method {
+		case http.MethodPost: // Handle POST
+
+			commit := &github.RepositoryCommit{
+				SHA: github.String("dry-run-sha"),
+				Commit: &github.Commit{
+					Message: github.String(mergeRequest.GetCommitMessage()),
+				},
+			}
+			buf, err := json.Marshal(commit)
+			if err != nil {
+				return nil, err
+			}
+
+			if status == 0 {
+				status = http.StatusCreated
+			}
+
+			return &http.Response{
+				StatusCode: status,
+				Body:       ioutil.NopCloser(bytes.NewBuffer(buf)),
 				Header:     http.Header{},
 			}, nil
 

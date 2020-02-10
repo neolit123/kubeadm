@@ -74,7 +74,7 @@ func TestProcess(t *testing.T) {
 			data: &pkg.Data{MinVersion: "v1.17.2"},
 			refsSrc: []*github.Reference{
 				&github.Reference{Ref: github.String("refs/tags/v1.17.2"), Object: &github.GitObject{SHA: github.String("1234567890")}},
-				&github.Reference{Ref: github.String("refs/tags/v1.17.1"), Object: &github.GitObject{SHA: github.String("1234567890")}},
+				&github.Reference{Ref: github.String("refs/tags/v1.17.2-rc.1"), Object: &github.GitObject{SHA: github.String("1234567890")}},
 				&github.Reference{Ref: github.String("refs/heads/master"), Object: &github.GitObject{SHA: github.String("1234567890")}},
 				&github.Reference{Ref: github.String("refs/heads/release-1.17"), Object: &github.GitObject{SHA: github.String("1234567890")}},
 				&github.Reference{Ref: github.String("refs/heads/release-1.16"), Object: &github.GitObject{SHA: github.String("1234567890")}},
