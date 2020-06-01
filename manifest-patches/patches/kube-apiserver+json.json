@@ -1,0 +1,7 @@
+[
+    {
+        "op": "add",
+        "path": "/spec/containers/0/command/-1",
+        "value": "--v=6"
+    }
+]
