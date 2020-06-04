@@ -8,11 +8,11 @@ import (
 	"strings"
 	// "regexp"
 
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/pkg/errors"
-	// jsonpatch "github.com/evanphx/json-patch/v5"
-	// v1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	// "k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/yaml"
 )
 
@@ -174,11 +174,71 @@ func readPatchesFromPath(patchPath string) ([]*patchSet, error) {
 	return patchSets, nil
 }
 
-func process(file string, patchPath string) error {
-	_, err := readPatchesFromPath(patchPath)
+func readComponentManifests(path string) (map[string][]byte, error) {
+	var componentDataMap map[string][]byte
+
+	for _, component := range components {
+		componentFile := filepath.Join(path, component, ".yaml")
+		data, err := ioutil.ReadFile(componentFile)
+		if err != nil {
+			// TODO; warning vs error?
+			return nil, errors.Wrapf(err, "could not read component file %q", componentFile)
+		}
+		componentDataMap[component] = data
+	}
+	return componentDataMap, nil
+}
+
+func process(componentPath string, patchPath string) error {
+	patchSets, err := readPatchesFromPath(patchPath)
 	if err != nil {
 		return err
 	}
+
+	componentDataMap, err := readComponentManifests(componentPath)
+	if err != nil {
+		return err
+	}
+
+	for component, data := range componentDataMap {
+		var err error
+		patchedData, err = yaml.YAMLToJSON(data)
+		if err != nil {
+			return err
+		}
+		for _, patchSet := range patchSets {
+			if patchSet.componentName != component {
+				continue
+			}
+			for _, patch := range patchSet.patches {
+				patchBytes := []byte(patch)
+				switch patchSet.patchType {
+				case types.JSONPatchType:
+					patchObj, err = jsonpatch.DecodePatch(patchBytes) // TODO fix obj
+					if err == nil {
+						patchedData, err = patchObj.Apply(patchedData)
+					}
+				case types.MergePatchType:
+					patchedData, err = jsonpatch.MergePatch(patchedData, patchBytes)
+				case types.StrategicMergePatchType:
+					patchedData, err = strategicpatch.StrategicMergePatch(patchedData, patchBytes, v1.Pod{})
+				}
+				if err != nil {
+					return errors.Wrapf(err, "could not apply the following patch of type %q to component %q:\n%s\n",
+						patchSet.patchType,
+						component,
+						patch)
+				}
+			}
+			patchedData, err = yaml.JSONToYAML(patchedData)
+			if err != nil {
+				return err
+			}
+			componentDataMap[component] = patchedData
+		}
+	}
+
+	// TODO WRITE files
 
 	return nil
 }
