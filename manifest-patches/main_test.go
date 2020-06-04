@@ -3,39 +3,41 @@ package main
 import (
 	"reflect"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestMatchComponentName(t *testing.T) {
 	tests := []struct {
-		input             string
+		fileName          string
 		expectedComponent string
 		expectedError     bool
 	}{
 		{
-			input:             "etcdzzz",
+			fileName:          "etcdzzz",
 			expectedComponent: "etcd",
 		},
 		{
-			input:             "kube-apiserverzzz",
+			fileName:          "kube-apiserverzzz",
 			expectedComponent: "kube-apiserver",
 		},
 		{
-			input:             "kube-controller-managerzzz",
+			fileName:          "kube-controller-managerzzz",
 			expectedComponent: "kube-controller-manager",
 		},
 		{
-			input:             "kube-schedulerzzz",
+			fileName:          "kube-schedulerzzz",
 			expectedComponent: "kube-scheduler",
 		},
 		{
-			input:         "foo",
+			fileName:      "foo",
 			expectedError: true,
 		},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.input, func(t *testing.T) {
-			c, err := matchComponentName(tc.input)
+		t.Run(tc.fileName, func(t *testing.T) {
+			c, err := getComponentNameFromFilename(tc.fileName)
 			if (err != nil) != tc.expectedError {
 				t.Errorf("expected error: %v, got: %v, error: %v", tc.expectedError, err != nil, err)
 			}
@@ -46,84 +48,82 @@ func TestMatchComponentName(t *testing.T) {
 	}
 }
 
-func TestParsePatch(t *testing.T) {
+func TestMatchPatchType(t *testing.T) {
 	tests := []struct {
-		fileName         string
-		expectedError    bool
-		expectedPatchSet *patchSet
+		fileName          string
+		expectedPatchType types.PatchType
+		expectedError     bool
 	}{
 		{
-			fileName:         "etcd.yaml",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes[""]},
+			fileName:          "foo+strategic.yaml",
+			expectedPatchType: types.StrategicMergePatchType,
 		},
 		{
-			fileName:         "kube-apiserver.yaml",
-			expectedPatchSet: &patchSet{componentName: "kube-apiserver", patchType: patchTypes[""]},
+			fileName:          "foo+json.yaml",
+			expectedPatchType: types.JSONPatchType,
 		},
 		{
-			fileName:         "kube-controller-manager.yaml",
-			expectedPatchSet: &patchSet{componentName: "kube-controller-manager", patchType: patchTypes[""]},
+			fileName:          "foo+merge.yaml",
+			expectedPatchType: types.MergePatchType,
 		},
 		{
-			fileName:         "kube-scheduler.yaml",
-			expectedPatchSet: &patchSet{componentName: "kube-scheduler", patchType: patchTypes[""]},
+			fileName:          "strategic",
+			expectedPatchType: types.StrategicMergePatchType,
 		},
 		{
-			fileName:         "etcd+strategic",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes["strategic"]},
-		},
-		{
-			fileName:         "etcd+json",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes["json"]},
-		},
-		{
-			fileName:         "etcd+merge.yaml",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes["merge"]},
-		},
-		{
-			fileName:         "etcd0+merge.yaml",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes["merge"]},
-		},
-		{
-			fileName:         "etcd0.yaml",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes[""]},
-		},
-		{
-			fileName:         "etcd0",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes[""]},
-		},
-		{
-			fileName:         "etcd",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes[""]},
-		},
-		{
-			fileName:         "etcd.+",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes[""]},
-		},
-		{
-			fileName:         "etcd.",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes[""]},
-		},
-		{
-			fileName:         "etcd+",
-			expectedPatchSet: &patchSet{componentName: "etcd", patchType: patchTypes[""]},
-		},
-		{
-			fileName:      "foo",
-			expectedError: true,
-		},
-		{
-			fileName:      "etcd+bar",
+			fileName:      "foo+bar.yaml",
 			expectedError: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.fileName, func(t *testing.T) {
-			p, err := createPatchSet(tc.fileName, nil, nil)
+			pt, err := getPatchTypeFromFilename(tc.fileName)
 			if (err != nil) != tc.expectedError {
-				t.Errorf("expected error: %v, got: %v, error: %v", tc.expectedError, err != nil, err)
+				t.Fatalf("expected error: %v, got: %v, error: %v", tc.expectedError, err != nil, err)
 			}
+			if pt != tc.expectedPatchType {
+				t.Fatalf("expected patchType: %s, got: %s", tc.expectedPatchType, pt)
+			}
+		})
+	}
+}
+
+func TestCreatePatchSet(t *testing.T) {
+	tests := []struct {
+		name             string
+		componentName    string
+		patchType        types.PatchType
+		expectedPatchSet *patchSet
+		data             string
+	}{
+		{
+			name:          "valid: YAML patches are separated and converted to JSON",
+			componentName: "etcd",
+			patchType:     types.StrategicMergePatchType,
+			data:          "foo: bar\n---foo: baz\n",
+			expectedPatchSet: &patchSet{
+				componentName: "etcd",
+				patchType:     types.StrategicMergePatchType,
+				patches:       []string{"{\"foo\":\"bar\"}", "{\"foo\":\"baz\"}"},
+			},
+		},
+		{
+			name:          "valid: JSON patches are separated",
+			componentName: "etcd",
+			patchType:     types.StrategicMergePatchType,
+			data:          "{\"foo\":\"bar\"}\n---{\"foo\":\"baz\"}",
+			expectedPatchSet: &patchSet{
+				componentName: "etcd",
+				patchType:     types.StrategicMergePatchType,
+				patches:       []string{"{\"foo\":\"bar\"}", "{\"foo\":\"baz\"}"},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p, _ := createPatchSet(tc.componentName, tc.patchType, tc.data)
 			if !reflect.DeepEqual(p, tc.expectedPatchSet) {
 				t.Fatalf("expected patch:\n%#v\ngot:\n%#v\n", tc.expectedPatchSet, p)
 			}

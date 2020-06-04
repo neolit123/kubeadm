@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -36,15 +35,14 @@ or "json" and they match the patch formats supported by kubectl. The default "pa
 type patchSet struct {
 	componentName string
 	patchType     types.PatchType
-	patches       [][]byte
+	patches       []string
 }
 
 var patchTypes = map[string]types.PatchType{
 	"json":      types.JSONPatchType,
 	"merge":     types.MergePatchType,
 	"strategic": types.StrategicMergePatchType,
-	// Threat an empty value as the default = strategic.
-	"": types.StrategicMergePatchType,
+	"":          types.StrategicMergePatchType, // Treat an empty value as the default = strategic.
 }
 
 var components = []string{
@@ -54,30 +52,28 @@ var components = []string{
 	"kube-scheduler",
 }
 
-// matchComponentName checks if the given string is prefixed by a known component name.
-func matchComponentName(input string) (string, error) {
+func getComponentNameFromFilename(fileName string) (string, error) {
 	var componentName string
 	for _, c := range components {
-		if strings.HasPrefix(input, c) {
+		if strings.HasPrefix(fileName, c) {
 			componentName = c
 			break
 		}
 	}
 	if len(componentName) == 0 {
-		return "", errors.Errorf("component name must be one of %v from input %q", components, input)
+		return "", errors.Errorf("component name must be one of %v from file name %q", components, fileName)
 	}
 	return componentName, nil
 }
 
-// matchPatchType extracts a patch type from a string.
-func matchPatchType(input string) (types.PatchType, error) {
-	idxDot := strings.LastIndex(input, ".")
+func getPatchTypeFromFilename(fileName string) (types.PatchType, error) {
+	idxDot := strings.LastIndex(fileName, ".")
 	if idxDot == -1 {
 		// Shift the dot index into the length of the string.
-		idxDot = len(input)
+		idxDot = len(fileName)
 	}
 
-	idxPlus := strings.Index(input, "+")
+	idxPlus := strings.Index(fileName, "+")
 	if idxPlus == -1 || idxPlus > idxDot {
 		// If the + character is missing or if its index is after the dot,
 		// just shift it into the dot index.
@@ -87,48 +83,34 @@ func matchPatchType(input string) (types.PatchType, error) {
 		idxPlus++
 	}
 
-	patchType := input[idxPlus:idxDot]
+	patchType := fileName[idxPlus:idxDot]
 	pt, ok := patchTypes[patchType]
 	if !ok {
-		return "", errors.Errorf("unknown patch type %q from input %q", patchType, input)
+		return "", errors.Errorf("unknown patch type %q from file name %q", patchType, fileName)
 	}
 	return pt, nil
 }
 
-// createPatchSet creates a patch object. If componentName is nil it will extract it from the filePath.
-// The expected file name format is "componentname[suffix][+patchtype][.extension]".
-func createPatchSet(fileName string, componentName *string, data []byte) (*patchSet, error) {
-	if componentName == nil {
-		// Match the component name from fileName as a prefix.
-		c, err := matchComponentName(fileName)
-		if err != nil {
-			return nil, err
-		}
-		componentName = &c
-	}
+// createPatchSet creates a patchSet object.
+func createPatchSet(componentName string, patchType types.PatchType, data string) (*patchSet, error) {
+	var patches []string
 
-	pt, err := matchPatchType(fileName)
-	if err != nil {
-		return nil, err
-	}
-
-	var patches [][]byte
 	if len(data) > 0 {
 		// Split the patches and convert them to JSON.
-		patches = bytes.Split(data, []byte("\n---"))
+		patches = strings.Split(data, "\n---")
 		for i, patch := range patches {
-			patchJSON, err := yaml.YAMLToJSON(patch)
+			patchJSON, err := yaml.YAMLToJSON([]byte(patch))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not convert patch to JSON:\n%s\n", patch)
 			}
-			patches[i] = patchJSON
+			patches[i] = string(patchJSON)
 		}
 	}
 
 	// Create patchSet.
 	return &patchSet{
-		componentName: *componentName,
-		patchType:     pt,
+		componentName: componentName,
+		patchType:     patchType,
 		patches:       patches,
 	}, nil
 }
@@ -156,8 +138,14 @@ func readPatchesFromPath(patchPath string) ([]*patchSet, error) {
 		// Extract the file name.
 		fileName := filepath.Base(f)
 
-		// Match the component name; else print a warning and skip.
-		componentName, err := matchComponentName(fileName)
+		// Only support the .yaml and .json extensions.
+		if !strings.HasSuffix(fileName, ".yaml") && !strings.HasSuffix(fileName, ".json") {
+			// TODO print warning
+			continue
+		}
+
+		// Get the component name from the filename; else print a warning and skip.
+		componentName, err := getComponentNameFromFilename(fileName)
 		if err != nil {
 			// TODO print warning
 			continue
@@ -169,8 +157,14 @@ func readPatchesFromPath(patchPath string) ([]*patchSet, error) {
 			return nil, errors.Wrapf(err, "could not read patch from file %q", f)
 		}
 
+		// Get the patch type from the filename.
+		patchType, err := getPatchTypeFromFilename(fileName)
+		if err != nil {
+			return nil, err
+		}
+
 		// Create a patchSet object.
-		patchSet, err := createPatchSet(fileName, &componentName, data)
+		patchSet, err := createPatchSet(componentName, patchType, string(data))
 		if err != nil {
 			return nil, err
 		}
