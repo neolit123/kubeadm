@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	// "regexp"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/pkg/errors"
@@ -38,6 +37,12 @@ type patchSet struct {
 	patches       []string
 }
 
+type componentPatchTarget struct {
+	name                 string
+	data                 []byte
+	strategicPatchObject interface{}
+}
+
 var patchTypes = map[string]types.PatchType{
 	"json":      types.JSONPatchType,
 	"merge":     types.MergePatchType,
@@ -54,12 +59,14 @@ var components = []string{
 
 func getComponentNameFromFilename(fileName string) (string, error) {
 	var componentName string
+
 	for _, c := range components {
 		if strings.HasPrefix(fileName, c) {
 			componentName = c
 			break
 		}
 	}
+
 	if len(componentName) == 0 {
 		return "", errors.Errorf("component name must be one of %v from file name %q", components, fileName)
 	}
@@ -140,21 +147,21 @@ func readPatchesFromPath(patchPath string) ([]*patchSet, error) {
 
 		// Only support the .yaml and .json extensions.
 		if !strings.HasSuffix(fileName, ".yaml") && !strings.HasSuffix(fileName, ".json") {
-			// TODO print warning
+			fmt.Printf("skipping file with unsupported extension %q\n", fileName)
 			continue
 		}
 
 		// Get the component name from the filename; else print a warning and skip.
 		componentName, err := getComponentNameFromFilename(fileName)
 		if err != nil {
-			// TODO print warning
+			fmt.Printf("skipping file %q\n", fileName)
 			continue
 		}
 
 		// Read the patch file.
 		data, err := ioutil.ReadFile(f)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not read patch from file %q", f)
+			return nil, errors.Wrapf(err, "could not read patches from file %q", f)
 		}
 
 		// Get the patch type from the filename.
@@ -174,116 +181,131 @@ func readPatchesFromPath(patchPath string) ([]*patchSet, error) {
 	return patchSets, nil
 }
 
-func readComponentManifests(path string) (map[string][]byte, error) {
-	var componentDataMap map[string][]byte
+func createStaticPodPatchTargets(path string) ([]*componentPatchTarget, error) {
+	var targets []*componentPatchTarget
 
 	for _, component := range components {
 		componentFile := filepath.Join(path, component, ".yaml")
+
 		data, err := ioutil.ReadFile(componentFile)
 		if err != nil {
-			// TODO; warning vs error?
 			return nil, errors.Wrapf(err, "could not read component file %q", componentFile)
 		}
-		componentDataMap[component] = data
+
+		target := &componentPatchTarget{
+			name:                 component,
+			data:                 data,
+			strategicPatchObject: v1.Pod{},
+		}
+		targets = append(targets, target)
 	}
-	return componentDataMap, nil
+
+	return targets, nil
 }
 
-func process(componentPath string, patchPath string) error {
-	patchSets, err := readPatchesFromPath(patchPath)
+func writeStaticPodTargets(path string, targets []*componentPatchTarget) error {
+	for _, target := range targets {
+		componentFile := filepath.Join(path, target.name, ".yaml")
+		if err := ioutil.WriteFile(componentFile, target.data, 0644); err != nil {
+			return errors.Wrapf(err, "could not write component file %q", componentFile)
+		}
+	}
+	return nil
+}
+
+func process(componentPath string, patchesPath string) error {
+	// Read the patches from the given path.
+	patchSets, err := readPatchesFromPath(patchesPath)
 	if err != nil {
 		return err
 	}
 
-	componentDataMap, err := readComponentManifests(componentPath)
+	// Reads the static Pods from disk.
+	componentTargets, err := createStaticPodPatchTargets(componentPath)
 	if err != nil {
 		return err
 	}
 
-	for component, data := range componentDataMap {
+	// Apply the patches to the component targets.
+	if err := applyPatchSetsToComponentTargets(componentTargets, patchSets); err != nil {
+		return err
+	}
+
+	// Write the static Pods to disk.
+	if err := writeStaticPodTargets(componentPath, componentTargets); err != nil {
+		return err
+	}
+	return nil
+}
+
+func applyPatchSetsToComponentTargets(componentTargets []*componentPatchTarget, patchSets []*patchSet) error {
+	// Iterate over the component targets.
+	for i, componentTarget := range componentTargets {
 		var err error
-		patchedData, err = yaml.YAMLToJSON(data)
+		var patchedData []byte
+
+		// Always convert the component data to JSON.
+		patchedData, err = yaml.YAMLToJSON(componentTarget.data)
 		if err != nil {
 			return err
 		}
+
+		// Iterate over the patchSets.
 		for _, patchSet := range patchSets {
-			if patchSet.componentName != component {
+			if patchSet.componentName != componentTarget.name {
 				continue
 			}
+
+			// Iterate over the patches in the patchSets.
 			for _, patch := range patchSet.patches {
 				patchBytes := []byte(patch)
+
+				// Patch based on the patch type.
 				switch patchSet.patchType {
+
+				// JSON patch.
 				case types.JSONPatchType:
-					patchObj, err = jsonpatch.DecodePatch(patchBytes) // TODO fix obj
+					var patchObj jsonpatch.Patch
+					patchObj, err = jsonpatch.DecodePatch(patchBytes)
 					if err == nil {
 						patchedData, err = patchObj.Apply(patchedData)
 					}
+
+				// Merge patch.
 				case types.MergePatchType:
 					patchedData, err = jsonpatch.MergePatch(patchedData, patchBytes)
+
+				// Strategic merge patch.
 				case types.StrategicMergePatchType:
-					patchedData, err = strategicpatch.StrategicMergePatch(patchedData, patchBytes, v1.Pod{})
+					patchedData, err = strategicpatch.StrategicMergePatch(
+						patchedData,
+						patchBytes,
+						componentTarget.strategicPatchObject,
+					)
 				}
+
 				if err != nil {
 					return errors.Wrapf(err, "could not apply the following patch of type %q to component %q:\n%s\n",
 						patchSet.patchType,
-						component,
+						componentTarget.name,
 						patch)
 				}
+				fmt.Printf("applied patch of type %q to component %q\n", patchSet.patchType, componentTarget.name)
 			}
+
+			// Convert the data back to YAML.
 			patchedData, err = yaml.JSONToYAML(patchedData)
 			if err != nil {
 				return err
 			}
-			componentDataMap[component] = patchedData
+
+			// Update the data for this component target.
+			componentTargets[i].data = patchedData
 		}
 	}
 
-	// TODO WRITE files
-
 	return nil
 }
-
-// pt := patchTypes["json"]
-
-// switch pt {
-// case types.JSONPatchType:
-// case types.MergePatchType:
-// case types.StrategicMergePatchType:
-// default:
-// }
-
-// updated, err := strategicpatch.StrategicMergePatch(dataJSON, patchJSON, v1.Pod{})
-// if err != nil {
-// 	return err
-// }
-
-// patchObj, err := jsonpatch.DecodePatch(patchJSON)
-// if err != nil {
-// 	return err
-// }
-// updated, err := patchObj.Apply(dataJSON)
-// if err != nil {
-// 	return err
-// }
-
-// updated, err := jsonpatch.MergePatch(dataJSON, patchJSON)
-// if err != nil {
-// 	return err
-// }
-
-// updatedYAML, err := yaml.JSONToYAML(updated)
-// if err != nil {
-// 	return err
-// }
-
-// fmt.Printf("\n\nupdated:\n%s\n", updatedYAML)
-// return nil
-
-/*
-
-go run main.go ~/go/src/k8s.io/kubernetes/_manifests/kube-apiserver.yaml ./patches
-
-*/
 
 func main() {
 	if len(os.Args) < 3 {
