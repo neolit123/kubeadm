@@ -43,6 +43,11 @@ type componentPatchTarget struct {
 	strategicPatchObject interface{}
 }
 
+type patchFile struct {
+	componentName string
+	path          string
+}
+
 var patchTypes = map[string]types.PatchType{
 	"json":      types.JSONPatchType,
 	"merge":     types.MergePatchType,
@@ -122,44 +127,49 @@ func createPatchSet(componentName string, patchType types.PatchType, data string
 	}, nil
 }
 
-func listFilesForPath(targetPath string) ([]string, error) {
-	var files []string
+func filerPatchFilesForPath(targetPath string) ([]*patchFile, []string, error) {
+	var ignoredFiles []string
+	var patchFiles []*patchFile
+
 	err := filepath.Walk(targetPath, func(path string, info os.FileInfo, err error) error {
-		files = append(files, path)
-		return nil
-	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not list files for path %q", targetPath)
-	}
-	return files, nil
-}
-
-func readPatchesFromPath(patchPath string) ([]*patchSet, error) {
-	files, err := listFilesForPath(patchPath)
-	if err != nil {
-		return nil, err
-	}
-
-	patchSets := make([]*patchSet, 0, len(files))
-	for _, f := range files {
-		// Extract the file name.
-		fileName := filepath.Base(f)
+		// Directories are ignored.
+		if info.IsDir() {
+			return nil
+		}
 
 		// Only support the .yaml and .json extensions.
-		if !strings.HasSuffix(fileName, ".yaml") && !strings.HasSuffix(fileName, ".json") {
-			fmt.Printf("skipping file with unsupported extension %q\n", fileName)
-			continue
+		if filepath.Ext(path) != ".yaml" && filepath.Ext(path) != ".json" {
+			ignoredFiles = append(ignoredFiles, path)
+			return nil
 		}
 
 		// Get the component name from the filename; else print a warning and skip.
-		componentName, err := getComponentNameFromFilename(fileName)
+		componentName, err := getComponentNameFromFilename(info.Name())
 		if err != nil {
-			fmt.Printf("skipping file %q\n", fileName)
-			continue
+			ignoredFiles = append(ignoredFiles, path)
+			return nil
 		}
 
+		pf := &patchFile{
+			path:          path,
+			componentName: componentName,
+		}
+		patchFiles = append(patchFiles, pf)
+		return nil
+	})
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "could not list files for path %q", targetPath)
+	}
+	return patchFiles, ignoredFiles, nil
+}
+
+func createPatchSetsFromPatchFiles(files []*patchFile) ([]*patchSet, error) {
+	patchSets := make([]*patchSet, 0, len(files))
+	for _, f := range files {
+		fileName := filepath.Base(f.path)
+
 		// Read the patch file.
-		data, err := ioutil.ReadFile(f)
+		data, err := ioutil.ReadFile(f.path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not read patches from file %q", f)
 		}
@@ -171,7 +181,7 @@ func readPatchesFromPath(patchPath string) ([]*patchSet, error) {
 		}
 
 		// Create a patchSet object.
-		patchSet, err := createPatchSet(componentName, patchType, string(data))
+		patchSet, err := createPatchSet(f.componentName, patchType, string(data))
 		if err != nil {
 			return nil, err
 		}
@@ -209,31 +219,6 @@ func writeStaticPodTargets(path string, targets []*componentPatchTarget) error {
 		if err := ioutil.WriteFile(componentFile, target.data, 0644); err != nil {
 			return errors.Wrapf(err, "could not write component file %q", componentFile)
 		}
-	}
-	return nil
-}
-
-func process(componentPath string, patchesPath string) error {
-	// Read the patches from the given path.
-	patchSets, err := readPatchesFromPath(patchesPath)
-	if err != nil {
-		return err
-	}
-
-	// Reads the static Pods from disk.
-	componentTargets, err := createStaticPodPatchTargets(componentPath)
-	if err != nil {
-		return err
-	}
-
-	// Apply the patches to the component targets.
-	if err := applyPatchSetsToComponentTargets(componentTargets, patchSets); err != nil {
-		return err
-	}
-
-	// Write the static Pods to disk.
-	if err := writeStaticPodTargets(componentPath, componentTargets); err != nil {
-		return err
 	}
 	return nil
 }
@@ -290,7 +275,7 @@ func applyPatchSetsToComponentTargets(componentTargets []*componentPatchTarget, 
 						componentTarget.name,
 						patch)
 				}
-				fmt.Printf("applied patch of type %q to component %q\n", patchSet.patchType, componentTarget.name)
+				fmt.Printf("[patches] applied patch of type %q to component %q\n", patchSet.patchType, componentTarget.name)
 			}
 
 			// Convert the data back to YAML.
@@ -304,6 +289,40 @@ func applyPatchSetsToComponentTargets(componentTargets []*componentPatchTarget, 
 		}
 	}
 
+	return nil
+}
+
+func process(componentPath string, patchesPath string) error {
+	// Get the files in the path.
+	patchFiles, ignoredFiles, err := filerPatchFilesForPath(patchesPath)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("[patches] found the following patch files in path %q: %v\n", patchesPath, patchFiles)
+	fmt.Printf("[patches] ignored the following files in path %q: %v\n", patchesPath, ignoredFiles)
+
+	// Read the patches from the given path.
+	patchSets, err := createPatchSetsFromPatchFiles(patchFiles)
+	if err != nil {
+		return err
+	}
+
+	// Reads the static Pods from disk.
+	componentTargets, err := createStaticPodPatchTargets(componentPath)
+	if err != nil {
+		return err
+	}
+
+	// Apply the patches to the component targets.
+	if err := applyPatchSetsToComponentTargets(componentTargets, patchSets); err != nil {
+		return err
+	}
+
+	// Write the static Pods to disk.
+	if err := writeStaticPodTargets(componentPath, componentTargets); err != nil {
+		return err
+	}
 	return nil
 }
 
