@@ -20,10 +20,12 @@ import (
 // https://kubernetes.io/docs/tasks/run-application/update-api-object-kubectl-patch/#use-a-strategic-merge-patch-to-update-a-deployment
 
 /*
-Path to a folder that contains files named "componentname[index][+patchtype][.extension]".
-For example "kube-apiserver0+merge.yaml" or just "kube-apiserver.yaml". "index" is a number starting
-from zero and determines which patch is applied first. "patchtype" can be one of "strategic", "merge"
-or "json" and they match the patch formats supported by kubectl. The default "patchtype" is "strategic".
+Path to a directory that contains files named "target[suffix][+patchtype][.extension]".
+For example, "kube-apiserver0+merge.yaml" or just "kube-apiserver.json".
+"patchtype" can be one of "strategic", "merge" or "json" and they match the patch formats
+supported by kubectl. The default "patchtype" is "strategic". "extension" must be either
+".json" or ".yaml". "suffix" is an optional string that can be used to determine
+which patches are applied first.
 */
 
 var patchTypes = map[string]types.PatchType{
@@ -33,13 +35,13 @@ var patchTypes = map[string]types.PatchType{
 	"":          types.StrategicMergePatchType, // Treat an empty value as the default = strategic.
 }
 
-// PatchTarget defines target to be patched such as a control-plane component.
+// PatchTarget defines a target to be patched, such as a control-plane static Pod.
 type PatchTarget struct {
-	// Name must be a known name - e.g. "etcd"
+	// Name must be the name of a known target.
 	Name string
 
 	// StrategicMergePatchObject is only used for strategic merge patches.
-	// It represents the underlying Kubernetes object type that is patched - e.g. "v1.Pod"
+	// It represents the underlying object type that is patched - e.g. "v1.Pod"
 	StrategicMergePatchObject interface{}
 
 	// Data must contain the bytes that will be patched.
@@ -52,7 +54,7 @@ type PatchManager struct {
 	output    io.Writer
 }
 
-// patchFile defines a set of patches of a certain type that target a component.
+// patchSet defines a set of patches of a certain type that can patch a target.
 type patchSet struct {
 	targetName string
 	patchType  types.PatchType
@@ -101,7 +103,7 @@ func (pm *PatchManager) ApplyPatchesToTarget(patchTarget *PatchTarget) error {
 	var err error
 	var patchedData []byte
 
-	// Always convert the component data to JSON.
+	// Always convert the target data to JSON.
 	patchedData, err = yaml.YAMLToJSON(patchTarget.Data)
 	if err != nil {
 		return err
@@ -157,8 +159,8 @@ func (pm *PatchManager) ApplyPatchesToTarget(patchTarget *PatchTarget) error {
 	return nil
 }
 
-// getTargetNameFromFilename accepts a file name and returns a known component string,
-// or an error if the component is unknown.
+// getTargetNameFromFilename accepts a file name and returns a known target name string,
+// or an error if the target name is unknown.
 func getTargetNameFromFilename(fileName string, knownTargets []string) (string, error) {
 	var targetName string
 
@@ -170,7 +172,7 @@ func getTargetNameFromFilename(fileName string, knownTargets []string) (string, 
 	}
 
 	if len(targetName) == 0 {
-		return "", errors.Errorf("component name must be one of %v from file name %q", knownTargets, fileName)
+		return "", errors.Errorf("target name must be one of %v from file name %q", knownTargets, fileName)
 	}
 	return targetName, nil
 }
@@ -249,7 +251,7 @@ func getPatchSetsFromPath(targetPath string, knownTargets []string) ([]*patchSet
 			return nil
 		}
 
-		// Get the component name from the filename. If there is an error ignore the file.
+		// Get the target name from the filename. If there is an error ignore the file.
 		targetName, err := getTargetNameFromFilename(info.Name(), knownTargets)
 		if err != nil {
 			ignoredFiles = append(ignoredFiles, fileName)
