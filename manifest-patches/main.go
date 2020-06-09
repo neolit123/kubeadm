@@ -42,13 +42,13 @@ type PatchTarget struct {
 	Data []byte
 }
 
-// PatchManager defines a patch manager that holds a set of patches that can be applied to a target.
+// PatchManager defines an object that can apply patches.
 type PatchManager struct {
 	patchSets []*patchSet
 	output    io.Writer
 }
 
-// patchSet defines a set of patches of a certain type that can patch a target.
+// patchSet defines a set of patches of a certain type that can patch a PatchTarget.
 type patchSet struct {
 	targetName string
 	patchType  types.PatchType
