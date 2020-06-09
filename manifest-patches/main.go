@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/pkg/errors"
@@ -27,13 +28,6 @@ supported by kubectl. The default "patchtype" is "strategic". "extension" must b
 ".json" or ".yaml". "suffix" is an optional string that can be used to determine
 which patches are applied first.
 */
-
-var patchTypes = map[string]types.PatchType{
-	"json":      types.JSONPatchType,
-	"merge":     types.MergePatchType,
-	"strategic": types.StrategicMergePatchType,
-	"":          types.StrategicMergePatchType, // Treat an empty value as the default = strategic.
-}
 
 // PatchTarget defines a target to be patched, such as a control-plane static Pod.
 type PatchTarget struct {
@@ -71,10 +65,29 @@ func (ps *patchSet) String() string {
 	)
 }
 
-// GetPatchManagerFromPath creates a patch manager that can be used to apply patches to "knownTargets".
+var (
+	pathLock  = &sync.RWMutex{}
+	pathCache = map[string]*PatchManager{}
+
+	patchTypes = map[string]types.PatchType{
+		"json":      types.JSONPatchType,
+		"merge":     types.MergePatchType,
+		"strategic": types.StrategicMergePatchType,
+		"":          types.StrategicMergePatchType, // Treat an empty value as the default = strategic.
+	}
+)
+
+// GetPatchManagerForPath creates a patch manager that can be used to apply patches to "knownTargets".
 // "path" should contain patches that can be used to patch the "knownTargets".
 // If "output" is non-nil, messages about actions performed by the manager would go on this io.Writer.
-func GetPatchManagerFromPath(path string, knownTargets []string, output io.Writer) (*PatchManager, error) {
+func GetPatchManagerForPath(path string, knownTargets []string, output io.Writer) (*PatchManager, error) {
+	pathLock.RLock()
+	if pm, known := pathCache[path]; known {
+		pathLock.RUnlock()
+		return pm, nil
+	}
+	pathLock.RUnlock()
+
 	if output == nil {
 		output = ioutil.Discard
 	}
@@ -94,7 +107,12 @@ func GetPatchManagerFromPath(path string, knownTargets []string, output io.Write
 		fmt.Fprintf(output, "[patches] ignored the following files: %v\n", ignoredFiles)
 	}
 
-	return &PatchManager{patchSets: patchSets, output: output}, nil
+	pm := &PatchManager{patchSets: patchSets, output: output}
+	pathLock.Lock()
+	pathCache[path] = pm
+	pathLock.Unlock()
+
+	return pm, nil
 }
 
 // ApplyPatchesToTarget takes a patch target and patches its "Data" using the patches
@@ -172,13 +190,13 @@ func getTargetNameFromFilename(fileName string, knownTargets []string) (string, 
 	}
 
 	if len(targetName) == 0 {
-		return "", errors.Errorf("target name must be one of %v from file name %q", knownTargets, fileName)
+		return "", errors.Errorf("received file name %q, but target must be one of %v", knownTargets, fileName)
 	}
 	return targetName, nil
 }
 
 // getPatchTypeFromFilename accepts a file name and returns the patch type encoded in it.
-// For example, "etcd+merge.json" would return "merge". Returns an  error on a unknown patch types.
+// For example, "etcd+merge.json" would return "merge". Returns an error on a unknown patch types.
 func getPatchTypeFromFilename(fileName string) (types.PatchType, error) {
 	idxDot := strings.LastIndex(fileName, ".")
 	if idxDot == -1 {

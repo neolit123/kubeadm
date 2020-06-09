@@ -210,7 +210,7 @@ func TestGetPatchSetsForPath(t *testing.T) {
 	}
 }
 
-func TestPatchPatchTarget(t *testing.T) {
+func TestGetPatchManagerForPath(t *testing.T) {
 	type file struct {
 		name string
 		data string
@@ -320,7 +320,7 @@ func TestPatchPatchTarget(t *testing.T) {
 				}
 			}
 
-			pm, err := GetPatchManagerFromPath(tempDir, testKnownTargets, nil)
+			pm, err := GetPatchManagerForPath(tempDir, testKnownTargets, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -337,5 +337,25 @@ func TestPatchPatchTarget(t *testing.T) {
 				t.Fatalf("expected result:\n%s\ngot:\n%s", tc.expectedData, tc.patchTarget.Data)
 			}
 		})
+	}
+}
+
+func TestGetPatchManagerForPathCache(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", testDirPattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	pmOld, err := GetPatchManagerForPath(tempDir, testKnownTargets, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pmNew, err := GetPatchManagerForPath(tempDir, testKnownTargets, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pmOld != pmNew {
+		t.Logf("path %q was not cached, expected pointer: %p, got: %p", tempDir, pmOld, pmNew)
 	}
 }
