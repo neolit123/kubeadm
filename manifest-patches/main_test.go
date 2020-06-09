@@ -21,7 +21,7 @@ var testKnownTargets = []string{
 
 const testDirPattern = "patch-files"
 
-func TestMatchComponentName(t *testing.T) {
+func TestGetTargetFromFilename(t *testing.T) {
 	tests := []struct {
 		fileName          string
 		expectedComponent string
@@ -51,7 +51,7 @@ func TestMatchComponentName(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.fileName, func(t *testing.T) {
-			c, err := getComponentNameFromFilename(tc.fileName, testKnownTargets)
+			c, err := getTargetNameFromFilename(tc.fileName, testKnownTargets)
 			if (err != nil) != tc.expectedError {
 				t.Errorf("expected error: %v, got: %v, error: %v", tc.expectedError, err != nil, err)
 			}
@@ -62,7 +62,7 @@ func TestMatchComponentName(t *testing.T) {
 	}
 }
 
-func TestMatchPatchType(t *testing.T) {
+func TestGetPatchTypeFromFilename(t *testing.T) {
 	tests := []struct {
 		fileName          string
 		expectedPatchType types.PatchType
@@ -106,38 +106,38 @@ func TestMatchPatchType(t *testing.T) {
 func TestCreatePatchSet(t *testing.T) {
 	tests := []struct {
 		name             string
-		componentName    string
+		targetName       string
 		patchType        types.PatchType
 		expectedPatchSet *patchSet
 		data             string
 	}{
 		{
-			name:          "valid: YAML patches are separated and converted to JSON",
-			componentName: "etcd",
-			patchType:     types.StrategicMergePatchType,
-			data:          "foo: bar\n---\nfoo: baz\n",
+			name:       "valid: YAML patches are separated and converted to JSON",
+			targetName: "etcd",
+			patchType:  types.StrategicMergePatchType,
+			data:       "foo: bar\n---\nfoo: baz\n",
 			expectedPatchSet: &patchSet{
-				componentName: "etcd",
-				patchType:     types.StrategicMergePatchType,
-				patches:       []string{`{"foo":"bar"}`, `{"foo":"baz"}`},
+				targetName: "etcd",
+				patchType:  types.StrategicMergePatchType,
+				patches:    []string{`{"foo":"bar"}`, `{"foo":"baz"}`},
 			},
 		},
 		{
-			name:          "valid: JSON patches are separated",
-			componentName: "etcd",
-			patchType:     types.StrategicMergePatchType,
-			data:          `{"foo":"bar"}` + "\n---\n" + `{"foo":"baz"}`,
+			name:       "valid: JSON patches are separated",
+			targetName: "etcd",
+			patchType:  types.StrategicMergePatchType,
+			data:       `{"foo":"bar"}` + "\n---\n" + `{"foo":"baz"}`,
 			expectedPatchSet: &patchSet{
-				componentName: "etcd",
-				patchType:     types.StrategicMergePatchType,
-				patches:       []string{`{"foo":"bar"}`, `{"foo":"baz"}`},
+				targetName: "etcd",
+				patchType:  types.StrategicMergePatchType,
+				patches:    []string{`{"foo":"bar"}`, `{"foo":"baz"}`},
 			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ps, _ := createPatchSet(tc.componentName, tc.patchType, tc.data)
+			ps, _ := createPatchSet(tc.targetName, tc.patchType, tc.data)
 			if !reflect.DeepEqual(ps, tc.expectedPatchSet) {
 				t.Fatalf("expected patch set:\n%+v\ngot:\n%+v\n", tc.expectedPatchSet, ps)
 			}
@@ -145,31 +145,37 @@ func TestCreatePatchSet(t *testing.T) {
 	}
 }
 
-func TestGetPatchFilesForPath(t *testing.T) {
+func TestGetPatchSetsForPath(t *testing.T) {
 	tests := []struct {
 		name                 string
 		filesToWrite         []string
-		expectedPatchFiles   []*patchFile
+		expectedPatchSets    []*patchSet
 		expectedIgnoredFiles []string
+		expectedError        bool
 	}{
 		{
 			name:         "valid: patch files are sorted and non-patch files are ignored",
-			filesToWrite: []string{"kube-scheduler.json", "kube-apiserver.yaml", "etcd.yaml", "foo", "bar.json"},
-			expectedPatchFiles: []*patchFile{
+			filesToWrite: []string{"kube-scheduler+merge.json", "kube-apiserver+json.yaml", "etcd.yaml", "foo", "bar.json"},
+			expectedPatchSets: []*patchSet{
 				{
-					path:          "etcd.yaml",
-					componentName: "etcd",
+					targetName: "etcd",
+					patchType:  types.StrategicMergePatchType,
 				},
 				{
-					path:          "kube-apiserver.yaml",
-					componentName: "kube-apiserver",
+					targetName: "kube-apiserver",
+					patchType:  types.JSONPatchType,
 				},
 				{
-					path:          "kube-scheduler.json",
-					componentName: "kube-scheduler",
+					targetName: "kube-scheduler",
+					patchType:  types.MergePatchType,
 				},
 			},
 			expectedIgnoredFiles: []string{"bar.json", "foo"},
+		},
+		{
+			name:          "invalid: bad patch type in filename returns and error",
+			filesToWrite:  []string{"kube-scheduler+foo.json"},
+			expectedError: true,
 		},
 	}
 
@@ -189,103 +195,38 @@ func TestGetPatchFilesForPath(t *testing.T) {
 				}
 			}
 
-			patchFiles, ignoredFiles, err := getPatchFilesForPath(tempDir, testKnownTargets)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			// Update paths to include temp. dir.
-			for i := range tc.expectedPatchFiles {
-				tc.expectedPatchFiles[i].path = filepath.Join(tempDir, tc.expectedPatchFiles[i].path)
-			}
-			for i := range tc.expectedIgnoredFiles {
-				tc.expectedIgnoredFiles[i] = filepath.Join(tempDir, tc.expectedIgnoredFiles[i])
+			patchSets, ignoredFiles, err := getPatchSetsFromPath(tempDir, testKnownTargets)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("expected error: %v, got: %v, error: %v", tc.expectedError, err != nil, err)
 			}
 
 			if !reflect.DeepEqual(tc.expectedIgnoredFiles, ignoredFiles) {
 				t.Fatalf("expected ignored files:\n%+v\ngot:\n%+v", tc.expectedIgnoredFiles, ignoredFiles)
 			}
-			if !reflect.DeepEqual(tc.expectedPatchFiles, patchFiles) {
-				t.Fatalf("expected patch files:\n%+v\ngot:\n%+v", tc.expectedPatchFiles, patchFiles)
-			}
-		})
-	}
-}
-
-func TestCreatePatchSetsFromPatchFiles(t *testing.T) {
-	tests := []struct {
-		name              string
-		patchFiles        []*patchFile
-		expectedPatchSets []*patchSet
-	}{
-		{
-			name: "valid: patch sets are correctly extracted from files",
-			patchFiles: []*patchFile{
-				{
-					path:          "kube-apisever+merge.yaml",
-					componentName: "kube-apisever",
-					data:          "foo: bar\n---\nfoo: baz",
-				},
-			},
-			expectedPatchSets: []*patchSet{
-				{
-					componentName: "kube-apisever",
-					patchType:     types.MergePatchType,
-					patches: []string{
-						`{"foo":"bar"}`,
-						`{"foo":"baz"}`,
-					},
-				},
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			tempDir, err := ioutil.TempDir("", testDirPattern)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(tempDir)
-
-			for _, file := range tc.patchFiles {
-				filePath := filepath.Join(tempDir, file.path)
-				err := ioutil.WriteFile(filePath, []byte(file.data), 0644)
-				if err != nil {
-					t.Fatalf("could not write temporary file %q", filePath)
-				}
-				(*file).path = filePath
-			}
-
-			patchSets, err := createPatchSetsFromPatchFiles(tc.patchFiles)
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			if !reflect.DeepEqual(tc.expectedPatchSets, patchSets) {
-				t.Fatalf("expected patch sets:\n%+v\ngot:\n%+v", tc.expectedPatchSets, patchSets)
+				t.Fatalf("expected patch files:\n%+v\ngot:\n%+v", tc.expectedPatchSets, patchSets)
 			}
 		})
 	}
 }
 
-func TestPatchComponentTarget(t *testing.T) {
+func TestPatchPatchTarget(t *testing.T) {
 	type file struct {
 		name string
 		data string
 	}
 
 	tests := []struct {
-		name            string
-		files           []*file
-		componentTarget *ComponentTarget
-		expectedData    []byte
-		expectedError   bool
+		name          string
+		files         []*file
+		patchTarget   *PatchTarget
+		expectedData  []byte
+		expectedError bool
 	}{
 		{
 			name: "valid: patch a kube-apiserver target using merge patch; json patch is applied first",
-			componentTarget: &ComponentTarget{
-				ComponentName:             "kube-apiserver",
+			patchTarget: &PatchTarget{
+				Name:                      "kube-apiserver",
 				StrategicMergePatchObject: v1.Pod{},
 				Data:                      []byte("foo: bar\nbaz: qux\n"),
 			},
@@ -303,8 +244,8 @@ func TestPatchComponentTarget(t *testing.T) {
 		},
 		{
 			name: "valid: kube-apiserver target is patched with json patch",
-			componentTarget: &ComponentTarget{
-				ComponentName:             "kube-apiserver",
+			patchTarget: &PatchTarget{
+				Name:                      "kube-apiserver",
 				StrategicMergePatchObject: v1.Pod{},
 				Data:                      []byte("foo: bar\n"),
 			},
@@ -318,8 +259,8 @@ func TestPatchComponentTarget(t *testing.T) {
 		},
 		{
 			name: "valid: kube-apiserver target is patched with strategic merge patch",
-			componentTarget: &ComponentTarget{
-				ComponentName:             "kube-apiserver",
+			patchTarget: &PatchTarget{
+				Name:                      "kube-apiserver",
 				StrategicMergePatchObject: v1.Pod{},
 				Data:                      []byte("foo: bar\n"),
 			},
@@ -333,8 +274,8 @@ func TestPatchComponentTarget(t *testing.T) {
 		},
 		{
 			name: "valid: etcd target is not changed because there are no patches for it",
-			componentTarget: &ComponentTarget{
-				ComponentName:             "etcd",
+			patchTarget: &PatchTarget{
+				Name:                      "etcd",
 				StrategicMergePatchObject: v1.Pod{},
 				Data:                      []byte("foo: bar\n"),
 			},
@@ -348,8 +289,8 @@ func TestPatchComponentTarget(t *testing.T) {
 		},
 		{
 			name: "invalid: cannot patch etcd target due to malformed json patch",
-			componentTarget: &ComponentTarget{
-				ComponentName:             "etcd",
+			patchTarget: &PatchTarget{
+				Name:                      "etcd",
 				StrategicMergePatchObject: v1.Pod{},
 				Data:                      []byte("foo: bar\n"),
 			},
@@ -384,7 +325,7 @@ func TestPatchComponentTarget(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = pm.PatchComponentTarget(tc.componentTarget)
+			err = pm.ApplyPatchesToTarget(tc.patchTarget)
 			if (err != nil) != tc.expectedError {
 				t.Fatalf("expected error: %v, got: %v, error: %v", tc.expectedError, err != nil, err)
 			}
@@ -392,8 +333,8 @@ func TestPatchComponentTarget(t *testing.T) {
 				return
 			}
 
-			if !bytes.Equal(tc.componentTarget.Data, tc.expectedData) {
-				t.Fatalf("expected result:\n%s\ngot:\n%s", tc.expectedData, tc.componentTarget.Data)
+			if !bytes.Equal(tc.patchTarget.Data, tc.expectedData) {
+				t.Fatalf("expected result:\n%s\ngot:\n%s", tc.expectedData, tc.patchTarget.Data)
 			}
 		})
 	}

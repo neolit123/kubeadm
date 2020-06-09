@@ -33,10 +33,10 @@ var patchTypes = map[string]types.PatchType{
 	"":          types.StrategicMergePatchType, // Treat an empty value as the default = strategic.
 }
 
-// ComponentTarget defines a component target to be patched.
-type ComponentTarget struct {
-	// ComponentName must be a known component name or identifier - e.g. "etcd"
-	ComponentName string
+// PatchTarget defines target to be patched such as a control-plane component.
+type PatchTarget struct {
+	// Name must be a known name - e.g. "etcd"
+	Name string
 
 	// StrategicMergePatchObject is only used for strategic merge patches.
 	// It represents the underlying Kubernetes object type that is patched - e.g. "v1.Pod"
@@ -54,35 +54,18 @@ type PatchManager struct {
 
 // patchFile defines a set of patches of a certain type that target a component.
 type patchSet struct {
-	componentName string
-	patchType     types.PatchType
-	patches       []string
-}
-
-// patchFile is a utility structure used when reading patch files from a path.
-type patchFile struct {
-	componentName string
-	path          string
-	data          string
+	targetName string
+	patchType  types.PatchType
+	patches    []string
 }
 
 // String() is used for unit-testing.
 func (ps *patchSet) String() string {
 	return fmt.Sprintf(
-		"{%q, %q, %q}",
-		ps.componentName,
+		"{%q, %q, %#v}",
+		ps.targetName,
 		ps.patchType,
 		ps.patches,
-	)
-}
-
-// String() is used for unit-testing.
-func (pf *patchFile) String() string {
-	return fmt.Sprintf(
-		"{%q, %q, %q}",
-		pf.componentName,
-		pf.path,
-		pf.data,
 	)
 }
 
@@ -97,42 +80,36 @@ func GetPatchManagerFromPath(path string, knownTargets []string, output io.Write
 	fmt.Fprintf(output, "[patches] reading patches from path %q\n", path)
 
 	// Get the files in the path.
-	patchFiles, ignoredFiles, err := getPatchFilesForPath(path, knownTargets)
+	patchSets, ignoredFiles, err := getPatchSetsFromPath(path, knownTargets)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(patchFiles) > 0 {
-		fmt.Fprintf(output, "[patches] found the following patch files: %v\n", patchFiles)
+	if len(patchSets) > 0 {
+		fmt.Fprintf(output, "[patches] found the following patch files: %v\n", patchSets)
 	}
 	if len(ignoredFiles) > 0 {
-		fmt.Fprintf(output, "[patches] ignored the following files: %v\n", patchFiles)
-	}
-
-	// Read the patches from the given path.
-	patchSets, err := createPatchSetsFromPatchFiles(patchFiles)
-	if err != nil {
-		return nil, err
+		fmt.Fprintf(output, "[patches] ignored the following files: %v\n", ignoredFiles)
 	}
 
 	return &PatchManager{patchSets: patchSets, output: output}, nil
 }
 
-// PatchComponentTarget takes a component target and patches its "Data" it using the patch
-// sets stored in the patch manager. The resulted "Data" is always converted to JSON.
-func (pm *PatchManager) PatchComponentTarget(componentTarget *ComponentTarget) error {
+// ApplyPatchesToTarget takes a patch target and patches its "Data" using the patches
+// stored in the patch manager. The resulted "Data" is always converted to JSON.
+func (pm *PatchManager) ApplyPatchesToTarget(patchTarget *PatchTarget) error {
 	var err error
 	var patchedData []byte
 
 	// Always convert the component data to JSON.
-	patchedData, err = yaml.YAMLToJSON(componentTarget.Data)
+	patchedData, err = yaml.YAMLToJSON(patchTarget.Data)
 	if err != nil {
 		return err
 	}
 
 	// Iterate over the patchSets.
 	for _, patchSet := range pm.patchSets {
-		if patchSet.componentName != componentTarget.ComponentName {
+		if patchSet.targetName != patchTarget.Name {
 			continue
 		}
 
@@ -160,42 +137,42 @@ func (pm *PatchManager) PatchComponentTarget(componentTarget *ComponentTarget) e
 				patchedData, err = strategicpatch.StrategicMergePatch(
 					patchedData,
 					patchBytes,
-					componentTarget.StrategicMergePatchObject,
+					patchTarget.StrategicMergePatchObject,
 				)
 			}
 
 			if err != nil {
-				return errors.Wrapf(err, "could not apply the following patch of type %q to component %q:\n%s\n",
+				return errors.Wrapf(err, "could not apply the following patch of type %q to target %q:\n%s\n",
 					patchSet.patchType,
-					componentTarget.ComponentName,
+					patchTarget.Name,
 					patch)
 			}
-			fmt.Fprintf(pm.output, "[patches] applied patch of type %q to component %q\n", patchSet.patchType, componentTarget.ComponentName)
+			fmt.Fprintf(pm.output, "[patches] applied patch of type %q to target %q\n", patchSet.patchType, patchTarget.Name)
 		}
 
-		// Update the data for this component target.
-		componentTarget.Data = patchedData
+		// Update the data for this patch target.
+		patchTarget.Data = patchedData
 	}
 
 	return nil
 }
 
-// getComponentNameFromFilename accepts a file name and returns a known component string,
+// getTargetNameFromFilename accepts a file name and returns a known component string,
 // or an error if the component is unknown.
-func getComponentNameFromFilename(fileName string, knownTargets []string) (string, error) {
-	var componentName string
+func getTargetNameFromFilename(fileName string, knownTargets []string) (string, error) {
+	var targetName string
 
-	for _, c := range knownTargets {
-		if strings.HasPrefix(fileName, c) {
-			componentName = c
+	for _, target := range knownTargets {
+		if strings.HasPrefix(fileName, target) {
+			targetName = target
 			break
 		}
 	}
 
-	if len(componentName) == 0 {
+	if len(targetName) == 0 {
 		return "", errors.Errorf("component name must be one of %v from file name %q", knownTargets, fileName)
 	}
-	return componentName, nil
+	return targetName, nil
 }
 
 // getPatchTypeFromFilename accepts a file name and returns the patch type encoded in it.
@@ -226,7 +203,7 @@ func getPatchTypeFromFilename(fileName string) (types.PatchType, error) {
 }
 
 // createPatchSet creates a patchSet object, by splitting the given "data" by "\n---".
-func createPatchSet(componentName string, patchType types.PatchType, data string) (*patchSet, error) {
+func createPatchSet(targetName string, patchType types.PatchType, data string) (*patchSet, error) {
 	var patches []string
 
 	if len(data) > 0 {
@@ -242,17 +219,17 @@ func createPatchSet(componentName string, patchType types.PatchType, data string
 	}
 
 	return &patchSet{
-		componentName: componentName,
-		patchType:     patchType,
-		patches:       patches,
+		targetName: targetName,
+		patchType:  patchType,
+		patches:    patches,
 	}, nil
 }
 
-// getPatchFilesForPath walks a path, ignores sub-directories and non-patch files, and
+// getPatchSetsFromPath walks a path, ignores sub-directories and non-patch files, and
 // returns a list of patchFile objects.
-func getPatchFilesForPath(targetPath string, knownTargets []string) ([]*patchFile, []string, error) {
+func getPatchSetsFromPath(targetPath string, knownTargets []string) ([]*patchSet, []string, error) {
 	var ignoredFiles []string
-	var patchFiles []*patchFile
+	patchSets := []*patchSet{}
 
 	err := filepath.Walk(targetPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -264,17 +241,25 @@ func getPatchFilesForPath(targetPath string, knownTargets []string) ([]*patchFil
 			return nil
 		}
 
+		fileName := filepath.Base(path)
+
 		// Only support the .yaml and .json extensions.
 		if filepath.Ext(path) != ".yaml" && filepath.Ext(path) != ".json" {
-			ignoredFiles = append(ignoredFiles, path)
+			ignoredFiles = append(ignoredFiles, fileName)
 			return nil
 		}
 
 		// Get the component name from the filename. If there is an error ignore the file.
-		componentName, err := getComponentNameFromFilename(info.Name(), knownTargets)
+		targetName, err := getTargetNameFromFilename(info.Name(), knownTargets)
 		if err != nil {
-			ignoredFiles = append(ignoredFiles, path)
+			ignoredFiles = append(ignoredFiles, fileName)
 			return nil
+		}
+
+		// Get the patch type from the filename.
+		patchType, err := getPatchTypeFromFilename(fileName)
+		if err != nil {
+			return err
 		}
 
 		// Read the patch file.
@@ -283,45 +268,20 @@ func getPatchFilesForPath(targetPath string, knownTargets []string) ([]*patchFil
 			return errors.Wrapf(err, "could not read the file %q", path)
 		}
 
-		pf := &patchFile{
-			path:          path,
-			data:          string(data),
-			componentName: componentName,
+		// Create a patchSet object.
+		patchSet, err := createPatchSet(targetName, patchType, string(data))
+		if err != nil {
+			return err
 		}
-		patchFiles = append(patchFiles, pf)
+
+		patchSets = append(patchSets, patchSet)
 		return nil
 	})
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not list files for path %q", targetPath)
 	}
 
-	return patchFiles, ignoredFiles, nil
-}
-
-// createPatchSetsFromPatchFiles takes a list of patchFile objects and returns a list of patchSet
-// objects. The function also ensures that unknown patch types encoded in a filename throw errors
-// and are not ignored.
-func createPatchSetsFromPatchFiles(files []*patchFile) ([]*patchSet, error) {
-	patchSets := make([]*patchSet, 0, len(files))
-
-	for _, f := range files {
-		fileName := filepath.Base(f.path)
-
-		// Get the patch type from the filename.
-		patchType, err := getPatchTypeFromFilename(fileName)
-		if err != nil {
-			return nil, err
-		}
-
-		// Create a patchSet object.
-		patchSet, err := createPatchSet(f.componentName, patchType, string(f.data))
-		if err != nil {
-			return nil, err
-		}
-		patchSets = append(patchSets, patchSet)
-	}
-
-	return patchSets, nil
+	return patchSets, ignoredFiles, nil
 }
 
 func process(componentPath string, path string) error {
