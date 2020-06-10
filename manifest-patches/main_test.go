@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"io/ioutil"
-	"k8s.io/api/core/v1"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -357,5 +358,86 @@ func TestGetPatchManagerForPathCache(t *testing.T) {
 	}
 	if pmOld != pmNew {
 		t.Logf("path %q was not cached, expected pointer: %p, got: %p", tempDir, pmOld, pmNew)
+	}
+}
+
+func TestPatchStaticPod(t *testing.T) {
+	type file struct {
+		name string
+		data string
+	}
+
+	tests := []struct {
+		name          string
+		files         []*file
+		pod           *v1.Pod
+		expectedPod   *v1.Pod
+		expectedError bool
+	}{
+		{
+			name: "valid: patch a kube-apiserver target using a couple of patches",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-apiserver",
+					Namespace: "foo",
+				},
+			},
+			expectedPod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-apiserver",
+					Namespace: "bar2",
+				},
+			},
+			files: []*file{
+				{
+					name: "kube-apiserver1+merge.json",
+					data: `{"metadata":{"namespace":"bar2"}}`,
+				},
+				{
+					name: "kube-apiserver0+json.json",
+					data: `[{"op": "replace", "path": "/metadata/namespace", "value": "bar1"}]`,
+				},
+			},
+		},
+		{
+			name: "invalid: unknown patch target name",
+			pod: &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "bar",
+				},
+			},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tempDir, err := ioutil.TempDir("", testDirPattern)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tempDir)
+
+			for _, file := range tc.files {
+				filePath := filepath.Join(tempDir, file.name)
+				err := ioutil.WriteFile(filePath, []byte(file.data), 0644)
+				if err != nil {
+					t.Fatalf("could not write temporary file %q", filePath)
+				}
+			}
+
+			pod, err := PatchStaticPod(tc.pod, tempDir, ioutil.Discard)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("expected error: %v, got: %v, error: %v", tc.expectedError, (err != nil), err)
+			}
+			if err != nil {
+				return
+			}
+
+			if !reflect.DeepEqual(tc.expectedPod, pod) {
+				t.Fatalf("expected object:\n%v\ngot:\n%v", tc.expectedPod, pod)
+			}
+		})
 	}
 }

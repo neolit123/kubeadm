@@ -11,6 +11,7 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/pkg/errors"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/yaml"
@@ -44,8 +45,9 @@ type PatchTarget struct {
 
 // PatchManager defines an object that can apply patches.
 type PatchManager struct {
-	patchSets []*patchSet
-	output    io.Writer
+	patchSets    []*patchSet
+	knownTargets []string
+	output       io.Writer
 }
 
 // patchSet defines a set of patches of a certain type that can patch a PatchTarget.
@@ -107,7 +109,11 @@ func GetPatchManagerForPath(path string, knownTargets []string, output io.Writer
 		fmt.Fprintf(output, "[patches] ignored the following files: %v\n", ignoredFiles)
 	}
 
-	pm := &PatchManager{patchSets: patchSets, output: output}
+	pm := &PatchManager{
+		patchSets:    patchSets,
+		knownTargets: knownTargets,
+		output:       output,
+	}
 	pathLock.Lock()
 	pathCache[path] = pm
 	pathLock.Unlock()
@@ -120,6 +126,17 @@ func GetPatchManagerForPath(path string, knownTargets []string, output io.Writer
 func (pm *PatchManager) ApplyPatchesToTarget(patchTarget *PatchTarget) error {
 	var err error
 	var patchedData []byte
+
+	var found bool
+	for _, pt := range pm.knownTargets {
+		if pt == patchTarget.Name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return errors.Errorf("unknown patch target name %q, must be one of %v", patchTarget.Name, pm.knownTargets)
+	}
 
 	// Always convert the target data to JSON.
 	patchedData, err = yaml.YAMLToJSON(patchTarget.Data)
@@ -304,6 +321,43 @@ func getPatchSetsFromPath(targetPath string, knownTargets []string) ([]*patchSet
 	return patchSets, ignoredFiles, nil
 }
 
+// PatchStaticPod patch a static Pod with patches stored in patchsDir.
+func PatchStaticPod(pod *v1.Pod, patchsDir string, output io.Writer) (*v1.Pod, error) {
+	// Marshal the Pod manifest into YAML.
+	podYAML, err := yaml.Marshal(pod)
+	if err != nil {
+		return pod, errors.Wrapf(err, "failed to marshal Pod manifest to YAML")
+	}
+
+	var testKnownTargets = []string{
+		"etcd",
+		"kube-apiserver",
+		"kube-controller-manager",
+		"kube-scheduler",
+	}
+
+	patchManager, err := GetPatchManagerForPath(patchsDir, testKnownTargets, output)
+	if err != nil {
+		return pod, err
+	}
+
+	patchTarget := &PatchTarget{
+		Name:                      pod.Name,
+		StrategicMergePatchObject: v1.Pod{},
+		Data:                      podYAML,
+	}
+	if err := patchManager.ApplyPatchesToTarget(patchTarget); err != nil {
+		return pod, err
+	}
+
+	pod2 := &v1.Pod{}
+	if err := yaml.Unmarshal(patchTarget.Data, pod2); err != nil {
+		return pod, errors.Wrapf(err, "failed to unmarshal YAML manifest to Pod")
+	}
+
+	return pod2, nil
+}
+
 func process(componentPath string, path string) error {
 	return nil
 }
@@ -319,3 +373,35 @@ func main() {
 		return
 	}
 }
+
+// KustomizeStaticPod applies patches defined in kustomizeDir to a static Pod manifest
+// func KustomizeStaticPod(pod *v1.Pod, kustomizeDir string) (*v1.Pod, error) {
+// 	// marshal the pod manifest into yaml
+// 	serialized, err := kubeadmutil.MarshalToYaml(pod, v1.SchemeGroupVersion)
+// 	if err != nil {
+// 		return pod, errors.Wrapf(err, "failed to marshal manifest to YAML")
+// 	}
+
+// 	km, err := kustomize.GetManager(kustomizeDir)
+// 	if err != nil {
+// 		return pod, errors.Wrapf(err, "failed to GetPatches from %q", kustomizeDir)
+// 	}
+
+// 	kustomized, err := km.Kustomize(serialized)
+// 	if err != nil {
+// 		return pod, errors.Wrap(err, "failed to kustomize static Pod manifest")
+// 	}
+
+// 	// unmarshal kustomized yaml back into a pod manifest
+// 	obj, err := kubeadmutil.UnmarshalFromYaml(kustomized, v1.SchemeGroupVersion)
+// 	if err != nil {
+// 		return pod, errors.Wrap(err, "failed to unmarshal kustomize manifest from YAML")
+// 	}
+
+// 	pod2, ok := obj.(*v1.Pod)
+// 	if !ok {
+// 		return pod, errors.Wrap(err, "kustomized manifest is not a valid Pod object")
+// 	}
+
+// 	return pod2, nil
+// }
