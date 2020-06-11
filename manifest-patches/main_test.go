@@ -151,6 +151,7 @@ func TestGetPatchSetsForPath(t *testing.T) {
 		name                 string
 		filesToWrite         []string
 		expectedPatchSets    []*patchSet
+		expectedPatchFiles   []string
 		expectedIgnoredFiles []string
 		expectedError        bool
 	}{
@@ -171,6 +172,7 @@ func TestGetPatchSetsForPath(t *testing.T) {
 					patchType:  types.MergePatchType,
 				},
 			},
+			expectedPatchFiles:   []string{"etcd.yaml", "kube-apiserver+json.yaml", "kube-scheduler+merge.json"},
 			expectedIgnoredFiles: []string{"bar.json", "foo"},
 		},
 		{
@@ -196,11 +198,14 @@ func TestGetPatchSetsForPath(t *testing.T) {
 				}
 			}
 
-			patchSets, ignoredFiles, err := getPatchSetsFromPath(tempDir, testKnownTargets)
+			patchSets, patchFiles, ignoredFiles, err := getPatchSetsFromPath(tempDir, testKnownTargets)
 			if (err != nil) != tc.expectedError {
 				t.Fatalf("expected error: %v, got: %v, error: %v", tc.expectedError, err != nil, err)
 			}
 
+			if !reflect.DeepEqual(tc.expectedPatchFiles, patchFiles) {
+				t.Fatalf("expected patch files:\n%+v\ngot:\n%+v", tc.expectedPatchFiles, patchFiles)
+			}
 			if !reflect.DeepEqual(tc.expectedIgnoredFiles, ignoredFiles) {
 				t.Fatalf("expected ignored files:\n%+v\ngot:\n%+v", tc.expectedIgnoredFiles, ignoredFiles)
 			}

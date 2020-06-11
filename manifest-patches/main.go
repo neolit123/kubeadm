@@ -97,13 +97,13 @@ func GetPatchManagerForPath(path string, knownTargets []string, output io.Writer
 	fmt.Fprintf(output, "[patches] reading patches from path %q\n", path)
 
 	// Get the files in the path.
-	patchSets, ignoredFiles, err := getPatchSetsFromPath(path, knownTargets)
+	patchSets, patchFiles, ignoredFiles, err := getPatchSetsFromPath(path, knownTargets)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(patchSets) > 0 {
-		fmt.Fprintf(output, "[patches] found the following patch files: %v\n", patchSets)
+	if len(patchFiles) > 0 {
+		fmt.Fprintf(output, "[patches] found the following patch files: %v\n", patchFiles)
 	}
 	if len(ignoredFiles) > 0 {
 		fmt.Fprintf(output, "[patches] ignored the following files: %v\n", ignoredFiles)
@@ -264,8 +264,8 @@ func createPatchSet(targetName string, patchType types.PatchType, data string) (
 
 // getPatchSetsFromPath walks a path, ignores sub-directories and non-patch files, and
 // returns a list of patchFile objects.
-func getPatchSetsFromPath(targetPath string, knownTargets []string) ([]*patchSet, []string, error) {
-	var ignoredFiles []string
+func getPatchSetsFromPath(targetPath string, knownTargets []string) ([]*patchSet, []string, []string, error) {
+	var ignoredFiles, patchFiles []string
 	patchSets := []*patchSet{}
 
 	err := filepath.Walk(targetPath, func(path string, info os.FileInfo, err error) error {
@@ -311,14 +311,15 @@ func getPatchSetsFromPath(targetPath string, knownTargets []string) ([]*patchSet
 			return err
 		}
 
+		patchFiles = append(patchFiles, fileName)
 		patchSets = append(patchSets, patchSet)
 		return nil
 	})
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "could not list files for path %q", targetPath)
+		return nil, nil, nil, errors.Wrapf(err, "could not list files for path %q", targetPath)
 	}
 
-	return patchSets, ignoredFiles, nil
+	return patchSets, patchFiles, ignoredFiles, nil
 }
 
 // PatchStaticPod patch a static Pod with patches stored in patchsDir.
