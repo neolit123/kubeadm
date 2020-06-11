@@ -245,6 +245,7 @@ func createPatchSet(targetName string, patchType types.PatchType, data string) (
 
 	if len(data) > 0 {
 		// Split the patches and convert them to JSON.
+		// Data that is already JSON will not cause an error.
 		patches = strings.Split(data, "\n---")
 		for i, patch := range patches {
 			patchJSON, err := yaml.YAMLToJSON([]byte(patch))
