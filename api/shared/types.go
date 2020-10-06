@@ -69,6 +69,13 @@ func (cv *Converter) GetFromCache(kind Kind) Kind {
 	return DeepCopy(cv.cache[key])
 }
 
+// ClearCache ...
+func (cv *Converter) ClearCache() {
+	for k := range cv.cache {
+		delete(cv.cache, k)
+	}
+}
+
 // GetObjectFromBytes ...
 func (cv *Converter) GetObjectFromBytes(typemeta *TypeMeta, input []byte) (Kind, error) {
 	kind, err := cv.GetObject(typemeta)
@@ -119,7 +126,7 @@ func DeepCopy(src Kind) Kind {
 	}
 	bytes, err := json.Marshal(src)
 	if err != nil {
-		panic("error marshal")
+		panic("error marshal: " + err.Error())
 	}
 	t := reflect.TypeOf(src)
 	dst := (reflect.New(t.Elem()).Interface()).(Kind)
