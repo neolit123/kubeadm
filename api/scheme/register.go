@@ -12,8 +12,8 @@ const (
 	Group = "kubeadm.k8s.io"
 )
 
-// DefaultVersionKinds ...
-var DefaultVersionKinds = []shared.VersionKinds{
+// VersionKinds ...
+var VersionKinds = []shared.VersionKinds{
 	{
 		Version: "v1beta1",
 		Kinds: []shared.Kind{

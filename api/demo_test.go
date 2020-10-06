@@ -23,7 +23,7 @@ var input = []byte(`
 `)
 
 func TestDemo(t *testing.T) {
-	cv := shared.NewConverter(scheme.Group, scheme.DefaultVersionKinds)
+	cv := shared.NewConverter(scheme.Group, scheme.VersionKinds)
 
 	obj, err := cv.GetObjectFromJSON(input)
 	if err != nil {
