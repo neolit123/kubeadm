@@ -66,7 +66,7 @@ func NewConverter(group string, versionKinds []VersionKinds) *Converter {
 }
 
 // GetObjectFromJSON ...
-func GetObjectFromJSON(cv *Converter, input []byte) (Kind, error) {
+func (cv *Converter) GetObjectFromJSON(input []byte) (Kind, error) {
 	typemeta := TypeMeta{}
 	if err := json.Unmarshal(input, &typemeta); err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func GetObjectFromJSON(cv *Converter, input []byte) (Kind, error) {
 		return nil, fmt.Errorf("malformed group/version: %s", typemeta.APIVersion)
 	}
 
-	iface := GetObject(cv, gv[1], typemeta.Kind)
+	iface := cv.GetObject(gv[1], typemeta.Kind)
 	if iface == nil {
 		return nil, fmt.Errorf("no object for version/kind: %s/%s", gv[1], typemeta.Kind)
 	}
@@ -92,7 +92,7 @@ func GetObjectFromJSON(cv *Converter, input []byte) (Kind, error) {
 }
 
 // GetObject ...
-func GetObject(cv *Converter, version, kind string) Kind {
+func (cv *Converter) GetObject(version, kind string) Kind {
 	for _, vk := range cv.versionKinds {
 		if version != vk.Version {
 			continue
@@ -126,16 +126,16 @@ func DeepCopy(src Kind) Kind {
 }
 
 // ConvertToLatest ...
-func ConvertToLatest(cv *Converter, in Kind) (Kind, error) {
+func (cv *Converter) ConvertToLatest(in Kind) (Kind, error) {
 	if len(cv.versionKinds) == 0 {
 		return nil, fmt.Errorf("no versions to convert to")
 	}
 	latest := cv.versionKinds[len(cv.versionKinds)-1]
-	return ConvertTo(cv, in, latest.Version)
+	return cv.ConvertTo(in, latest.Version)
 }
 
 // ConvertTo ...
-func ConvertTo(cv *Converter, in Kind, targetVersion string) (Kind, error) {
+func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	if len(cv.versionKinds) == 0 {
 		return nil, fmt.Errorf("no versions to convert to")
 	}

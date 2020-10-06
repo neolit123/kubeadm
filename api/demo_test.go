@@ -25,16 +25,19 @@ var input = []byte(`
 func TestDemo(t *testing.T) {
 	cv := shared.NewConverter(scheme.Group, scheme.DefaultVersionKinds)
 
-	obj, err := shared.GetObjectFromJSON(cv, input)
+	obj, err := cv.GetObjectFromJSON(input)
 	if err != nil {
 		panic(err.Error())
 	}
 	t.Logf("--------%#v", obj)
 
-	obj, _ = shared.ConvertTo(cv, obj, "v1beta3")
+	obj, _ = cv.ConvertTo(obj, "v1beta3")
 	t.Logf("--------%#v", obj)
 
-	obj, _ = shared.ConvertTo(cv, obj, "v1beta1")
+	obj, _ = cv.ConvertTo(obj, "v1beta1")
+	t.Logf("--------%#v", obj)
+
+	obj, _ = cv.ConvertTo(obj, "v1beta2")
 	t.Logf("--------%#v", obj)
 }
 

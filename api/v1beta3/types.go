@@ -10,8 +10,6 @@ type Zed struct {
 	shared.TypeMeta `json:",inline"`
 	// A ...
 	A string `json:"a,omitempty"`
-	// B ...
-	B string `json:"b,omitempty"`
 }
 
 var _ shared.Kind = (*Zed)(nil)
@@ -33,16 +31,15 @@ func (*Zed) ConvertUp(cv *shared.Converter, in shared.Kind) (shared.Kind, error)
 	out := &Zed{}
 	cv.SetTypeMeta(out)
 	out.A = obj.A
-	out.B = obj.B
 	return out, nil
 }
 
 // ConvertDown ...
 func (*Zed) ConvertDown(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	obj := in.(*Zed)
-	bar := &v1beta2.Bar{}
+	oldKind := cv.GetFromCache("v1beta2.Bar")
+	bar := oldKind.(*v1beta2.Bar)
+	obj, _ := in.(*Zed)
 	bar.A = obj.A
-	bar.B = obj.B
 	return bar, nil
 }
 
