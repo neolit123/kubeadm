@@ -1,6 +1,9 @@
 package v1beta3
 
-import "k8s.io/kubeadm/api/shared"
+import (
+	"k8s.io/kubeadm/api/shared"
+	"k8s.io/kubeadm/api/v1beta2"
+)
 
 // Zed ...
 type Zed struct {
@@ -9,8 +12,6 @@ type Zed struct {
 	A string `json:"a,omitempty"`
 	// B ...
 	B string `json:"b,omitempty"`
-	// C ...
-	C string `json:"c,omitempty"`
 }
 
 var _ shared.Kind = (*Zed)(nil)
@@ -27,17 +28,27 @@ func (*Zed) Name() string {
 
 // ConvertUp ...
 func (*Zed) ConvertUp(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	return in, nil
+	cv.AddToCache("v1beta2.Bar", in)
+	obj, _ := in.(*v1beta2.Bar)
+	out := &Zed{}
+	cv.SetTypeMeta(out)
+	out.A = obj.A
+	out.B = obj.B
+	return out, nil
 }
 
 // ConvertDown ...
 func (*Zed) ConvertDown(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	return in, nil
+	obj := in.(*Zed)
+	bar := &v1beta2.Bar{}
+	bar.A = obj.A
+	bar.B = obj.B
+	return bar, nil
 }
 
 // ConvertUpName ...
 func (*Zed) ConvertUpName() string {
-	return "Zed"
+	return "Bar"
 }
 
 // ConvertDownName ...
@@ -53,4 +64,9 @@ func (*Zed) Validate(in shared.Kind) error {
 // Default ...
 func (*Zed) Default(in shared.Kind) {
 	return
+}
+
+// GetTypeMeta ...
+func (x *Zed) GetTypeMeta() *shared.TypeMeta {
+	return &x.TypeMeta
 }

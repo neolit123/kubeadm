@@ -1,6 +1,8 @@
 package v1beta1
 
-import "k8s.io/kubeadm/api/shared"
+import (
+	"k8s.io/kubeadm/api/shared"
+)
 
 // Foo ...
 type Foo struct {
@@ -53,4 +55,9 @@ func (*Foo) Validate(in shared.Kind) error {
 // Default ...
 func (*Foo) Default(in shared.Kind) {
 	return
+}
+
+// GetTypeMeta ...
+func (x *Foo) GetTypeMeta() *shared.TypeMeta {
+	return &x.TypeMeta
 }

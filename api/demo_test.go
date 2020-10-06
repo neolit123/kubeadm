@@ -23,23 +23,19 @@ var input = []byte(`
 `)
 
 func TestDemo(t *testing.T) {
-	cv := shared.NewConverter(scheme.DefaultVersionKinds)
+	cv := shared.NewConverter(scheme.Group, scheme.DefaultVersionKinds)
 
-	iface, err := shared.GetObjectFromJSON(cv, input)
+	obj, err := shared.GetObjectFromJSON(cv, input)
 	if err != nil {
 		panic(err.Error())
 	}
+	t.Logf("--------%#v", obj)
 
-	obj, ok := iface.(shared.Kind)
-	if !ok {
-		panic(err)
-	}
+	obj, _ = shared.ConvertTo(cv, obj, "v1beta3")
+	t.Logf("--------%#v", obj)
 
-	t.Log("--------", obj.Version())
-
-	obj, _ = shared.ConvertToLatest(cv, obj)
-
-	t.Log("--------", obj.Version())
+	obj, _ = shared.ConvertTo(cv, obj, "v1beta1")
+	t.Logf("--------%#v", obj)
 }
 
 // func TestDemo(t *testing.T) {

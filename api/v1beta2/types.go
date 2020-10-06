@@ -1,6 +1,9 @@
 package v1beta2
 
-import "k8s.io/kubeadm/api/shared"
+import (
+	"k8s.io/kubeadm/api/shared"
+	"k8s.io/kubeadm/api/v1beta1"
+)
 
 // Bar ...
 type Bar struct {
@@ -9,8 +12,6 @@ type Bar struct {
 	A string `json:"a,omitempty"`
 	// B ...
 	B string `json:"b,omitempty"`
-	// C ...
-	C string `json:"c,omitempty"`
 }
 
 var _ shared.Kind = (*Bar)(nil)
@@ -27,17 +28,28 @@ func (*Bar) Name() string {
 
 // ConvertUp ...
 func (*Bar) ConvertUp(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	return in, nil
+	cv.AddToCache("v1beta1.Foo", in)
+	obj, _ := in.(*v1beta1.Foo)
+	out := &Bar{}
+	cv.SetTypeMeta(out)
+	out.A = obj.A
+	out.B = obj.B
+	return out, nil
 }
 
 // ConvertDown ...
 func (*Bar) ConvertDown(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	return in, nil
+	oldKind := cv.GetFromCache("v1beta1.Foo")
+	foo := oldKind.(*v1beta1.Foo)
+	obj, _ := in.(*Bar)
+	foo.A = obj.A
+	foo.B = obj.B
+	return foo, nil
 }
 
 // ConvertUpName ...
 func (*Bar) ConvertUpName() string {
-	return "Bar"
+	return "Foo"
 }
 
 // ConvertDownName ...
@@ -53,4 +65,9 @@ func (*Bar) Validate(in shared.Kind) error {
 // Default ...
 func (*Bar) Default(in shared.Kind) {
 	return
+}
+
+// GetTypeMeta ...
+func (x *Bar) GetTypeMeta() *shared.TypeMeta {
+	return &x.TypeMeta
 }

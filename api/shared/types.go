@@ -25,6 +25,7 @@ type Kind interface {
 	ConvertDownName() string
 	Validate(Kind) error
 	Default(Kind)
+	GetTypeMeta() *TypeMeta
 }
 
 // VersionKinds ...
@@ -35,20 +36,37 @@ type VersionKinds struct {
 
 // Converter ...
 type Converter struct {
+	group        string
 	versionKinds []VersionKinds
-	cache        map[string]interface{}
+	cache        map[string]Kind
+}
+
+// GetGroup ...
+func (cv *Converter) GetGroup() string {
+	return cv.group
+}
+
+// AddToCache ...
+func (cv *Converter) AddToCache(key string, kind Kind) {
+	cv.cache[key] = DeepCopy(kind)
+}
+
+// GetFromCache ...
+func (cv *Converter) GetFromCache(key string) Kind {
+	return DeepCopy(cv.cache[key])
 }
 
 // NewConverter ...
-func NewConverter(versionKinds []VersionKinds) *Converter {
+func NewConverter(group string, versionKinds []VersionKinds) *Converter {
 	return &Converter{
+		group:        group,
 		versionKinds: versionKinds,
-		cache:        map[string]interface{}{},
+		cache:        map[string]Kind{},
 	}
 }
 
 // GetObjectFromJSON ...
-func GetObjectFromJSON(cv *Converter, input []byte) (interface{}, error) {
+func GetObjectFromJSON(cv *Converter, input []byte) (Kind, error) {
 	typemeta := TypeMeta{}
 	if err := json.Unmarshal(input, &typemeta); err != nil {
 		return nil, err
@@ -74,7 +92,7 @@ func GetObjectFromJSON(cv *Converter, input []byte) (interface{}, error) {
 }
 
 // GetObject ...
-func GetObject(cv *Converter, version, kind string) interface{} {
+func GetObject(cv *Converter, version, kind string) Kind {
 	for _, vk := range cv.versionKinds {
 		if version != vk.Version {
 			continue
@@ -84,25 +102,24 @@ func GetObject(cv *Converter, version, kind string) interface{} {
 				continue
 			}
 			t := reflect.TypeOf(k)
-			return reflect.New(t.Elem()).Interface()
+			return (reflect.New(t.Elem()).Interface()).(Kind)
 		}
 	}
 	return nil
 }
 
 // DeepCopy ...
-func DeepCopy(src interface{}) interface{} {
+func DeepCopy(src Kind) Kind {
 	if src == nil {
-		panic("nil value passed to deepCopy")
+		panic("nil value passed to DeepCopy")
 	}
 	bytes, err := json.Marshal(src)
 	if err != nil {
 		panic("error marshal")
 	}
 	t := reflect.TypeOf(src)
-	dst := reflect.New(t.Elem()).Interface()
-	err = json.Unmarshal(bytes, dst)
-	if err != nil {
+	dst := (reflect.New(t.Elem()).Interface()).(Kind)
+	if err := json.Unmarshal(bytes, dst); err != nil {
 		panic("error unmarshal: " + err.Error())
 	}
 	return dst
@@ -170,7 +187,7 @@ func ConvertTo(cv *Converter, in Kind, targetVersion string) (Kind, error) {
 	}
 
 	fmt.Println("convert down")
-	for i := versionIdx - 1; i >= targetVersionIdx; i-- {
+	for i := versionIdx; i >= targetVersionIdx; i-- {
 		vk := cv.versionKinds[i]
 
 		for _, k := range vk.Kinds {
@@ -181,7 +198,7 @@ func ConvertTo(cv *Converter, in Kind, targetVersion string) (Kind, error) {
 				}
 				in = out
 				// fmt.Printf("convert down %T, %p\n", in, in)
-				kind = k.Name()
+				kind = k.ConvertUpName()
 			}
 		}
 	}
@@ -193,16 +210,22 @@ convertUp:
 		// find the same kind in the next version
 		for _, k := range vk.Kinds {
 			if k.ConvertUpName() == kind {
-				in = in.(Kind)
 				out, err = k.ConvertUp(cv, in)
 				// fmt.Printf("convert up %T, %p - %T, %p\n", in, in, out, out)
 				if err != nil {
 					return nil, fmt.Errorf("cannot convert %s/%s to %s/%s: %v", in.Version(), in.Name(), vk.Version, k.Name(), err)
 				}
 				in = out
-				kind = k.Name()
+				kind = k.ConvertDownName()
 			}
 		}
 	}
 	return out, nil
+}
+
+// SetTypeMeta ...
+func (cv *Converter) SetTypeMeta(kind Kind) {
+	typemeta := kind.GetTypeMeta()
+	typemeta.APIVersion = cv.group + "/" + kind.Version()
+	typemeta.Kind = kind.ConvertDownName()
 }
