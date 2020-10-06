@@ -48,13 +48,13 @@ func (*Foo) ConvertDownName() string {
 }
 
 // Validate ...
-func (*Foo) Validate(in shared.Kind) error {
+func (x *Foo) Validate() error {
 	return nil
 }
 
 // Default ...
-func (*Foo) Default(in shared.Kind) {
-	return
+func (x *Foo) Default() error {
+	return nil
 }
 
 // GetTypeMeta ...

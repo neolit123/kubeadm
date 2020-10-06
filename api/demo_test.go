@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	// "bytes"
 	// "strings"
 	"testing"
@@ -24,8 +25,10 @@ var input = []byte(`
 
 func TestDemo(t *testing.T) {
 	cv := shared.NewConverter(scheme.Group, scheme.VersionKinds)
+	cv.SetUnmarshalFunc(json.Unmarshal)
+	cv.SetMarshalFunc(json.Marshal)
 
-	obj, err := cv.GetObjectFromJSON(input)
+	obj, err := cv.GetObjectFromBytes(input)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -39,6 +42,15 @@ func TestDemo(t *testing.T) {
 
 	obj, _ = cv.ConvertTo(obj, "v1beta2")
 	t.Logf("--------%#v", obj)
+
+	obj, err = obj.ConvertDown(cv, obj)
+	t.Logf("--------%#v", obj)
+
+	data, err := cv.Marshal(obj)
+	if err != nil {
+		panic("marshal" + err.Error())
+	}
+	t.Logf("data:%s", data)
 }
 
 // func TestDemo(t *testing.T) {

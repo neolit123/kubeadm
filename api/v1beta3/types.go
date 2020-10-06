@@ -54,13 +54,13 @@ func (*Zed) ConvertDownName() string {
 }
 
 // Validate ...
-func (*Zed) Validate(in shared.Kind) error {
+func (x *Zed) Validate() error {
 	return nil
 }
 
 // Default ...
-func (*Zed) Default(in shared.Kind) {
-	return
+func (x *Zed) Default() error {
+	return nil
 }
 
 // GetTypeMeta ...

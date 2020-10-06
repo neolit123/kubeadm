@@ -23,8 +23,8 @@ type Kind interface {
 	ConvertDown(*Converter, Kind) (Kind, error)
 	ConvertUpName() string
 	ConvertDownName() string
-	Validate(Kind) error
-	Default(Kind)
+	Validate() error
+	Default() error
 	GetTypeMeta() *TypeMeta
 }
 
@@ -36,9 +36,11 @@ type VersionKinds struct {
 
 // Converter ...
 type Converter struct {
-	group        string
-	versionKinds []VersionKinds
-	cache        map[string]Kind
+	group         string
+	versionKinds  []VersionKinds
+	cache         map[string]Kind
+	unmarshalFunc func([]byte, interface{}) error
+	marshalFunc   func(interface{}) ([]byte, error)
 }
 
 // GetGroup ...
@@ -65,10 +67,14 @@ func NewConverter(group string, versionKinds []VersionKinds) *Converter {
 	}
 }
 
-// GetObjectFromJSON ...
-func (cv *Converter) GetObjectFromJSON(input []byte) (Kind, error) {
+// GetObjectFromBytes ...
+func (cv *Converter) GetObjectFromBytes(input []byte) (Kind, error) {
+	if cv.unmarshalFunc == nil {
+		return nil, fmt.Errorf("unmarshal function not set")
+	}
+
 	typemeta := TypeMeta{}
-	if err := json.Unmarshal(input, &typemeta); err != nil {
+	if err := cv.unmarshalFunc(input, &typemeta); err != nil {
 		return nil, err
 	}
 
@@ -84,7 +90,7 @@ func (cv *Converter) GetObjectFromJSON(input []byte) (Kind, error) {
 		return nil, fmt.Errorf("no object for version/kind: %s/%s", gv[1], typemeta.Kind)
 	}
 
-	if err := json.Unmarshal(input, iface); err != nil {
+	if err := cv.unmarshalFunc(input, iface); err != nil {
 		return nil, err
 	}
 
@@ -228,4 +234,30 @@ func (cv *Converter) SetTypeMeta(kind Kind) {
 	typemeta := kind.GetTypeMeta()
 	typemeta.APIVersion = cv.group + "/" + kind.Version()
 	typemeta.Kind = kind.ConvertDownName()
+}
+
+// SetMarshalFunc ...
+func (cv *Converter) SetMarshalFunc(f func(interface{}) ([]byte, error)) {
+	cv.marshalFunc = f
+}
+
+// SetUnmarshalFunc ...
+func (cv *Converter) SetUnmarshalFunc(f func([]byte, interface{}) error) {
+	cv.unmarshalFunc = f
+}
+
+// Marshal ...
+func (cv *Converter) Marshal(k Kind) ([]byte, error) {
+	if cv.marshalFunc == nil {
+		return nil, fmt.Errorf("marshal function not set")
+	}
+	return cv.marshalFunc(k)
+}
+
+// Unmarshal ...
+func (cv *Converter) Unmarshal(b []byte, k Kind) error {
+	if cv.unmarshalFunc == nil {
+		return fmt.Errorf("unmarshal function not set")
+	}
+	return cv.unmarshalFunc(b, k)
 }

@@ -58,13 +58,13 @@ func (*Bar) ConvertDownName() string {
 }
 
 // Validate ...
-func (*Bar) Validate(in shared.Kind) error {
+func (x *Bar) Validate() error {
 	return nil
 }
 
 // Default ...
-func (*Bar) Default(in shared.Kind) {
-	return
+func (x *Bar) Default() error {
+	return nil
 }
 
 // GetTypeMeta ...
