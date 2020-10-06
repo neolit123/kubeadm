@@ -58,12 +58,14 @@ func (cv *Converter) GetGroup() string {
 }
 
 // AddToCache ...
-func (cv *Converter) AddToCache(key string, kind Kind) {
+func (cv *Converter) AddToCache(kind Kind) {
+	key := fmt.Sprintf("%s.%s", kind.Version(), kind.Name())
 	cv.cache[key] = DeepCopy(kind)
 }
 
 // GetFromCache ...
-func (cv *Converter) GetFromCache(key string) Kind {
+func (cv *Converter) GetFromCache(kind Kind) Kind {
+	key := fmt.Sprintf("%s.%s", kind.Version(), kind.Name())
 	return DeepCopy(cv.cache[key])
 }
 
@@ -96,13 +98,18 @@ func (cv *Converter) GetObject(typemeta *TypeMeta) (Kind, error) {
 			if typemeta.Kind != k.Name() {
 				continue
 			}
-			t := reflect.TypeOf(k)
-			kind := (reflect.New(t.Elem()).Interface()).(Kind)
-			cv.SetTypeMeta(kind)
-			return kind, nil
+			return cv.NewObject(k), nil
 		}
 	}
 	return nil, fmt.Errorf("no object for: %+v", typemeta)
+}
+
+// NewObject ...
+func (cv *Converter) NewObject(kind Kind) Kind {
+	t := reflect.TypeOf(kind)
+	k := (reflect.New(t.Elem()).Interface()).(Kind)
+	cv.SetTypeMeta(k)
+	return k
 }
 
 // DeepCopy ...
@@ -197,7 +204,6 @@ convertUp:
 	for i := versionIdx + 1; i < targetVersionIdx+1; i++ {
 		vk := cv.versionKinds[i]
 
-		// find the same kind in the next version
 		for _, k := range vk.Kinds {
 			if k.ConvertUpName() == kind {
 				out, err = k.ConvertUp(cv, in)

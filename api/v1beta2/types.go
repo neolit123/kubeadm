@@ -30,7 +30,7 @@ func (*Bar) Name() string {
 
 // ConvertUp ...
 func (*Bar) ConvertUp(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	cv.AddToCache("v1beta1.Foo", in)
+	cv.AddToCache(in)
 	obj, _ := in.(*v1beta1.Foo)
 	out := &Bar{}
 	cv.SetTypeMeta(out)
@@ -41,7 +41,7 @@ func (*Bar) ConvertUp(cv *shared.Converter, in shared.Kind) (shared.Kind, error)
 
 // ConvertDown ...
 func (*Bar) ConvertDown(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	oldKind := cv.GetFromCache("v1beta1.Foo")
+	oldKind := cv.GetFromCache(&v1beta1.Foo{})
 	foo := oldKind.(*v1beta1.Foo)
 	obj, _ := in.(*Bar)
 	foo.A = obj.A

@@ -28,7 +28,7 @@ func (*Zed) Name() string {
 
 // ConvertUp ...
 func (*Zed) ConvertUp(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	cv.AddToCache("v1beta2.Bar", in)
+	cv.AddToCache(in)
 	obj, _ := in.(*v1beta2.Bar)
 	out := &Zed{}
 	cv.SetTypeMeta(out)
@@ -38,7 +38,7 @@ func (*Zed) ConvertUp(cv *shared.Converter, in shared.Kind) (shared.Kind, error)
 
 // ConvertDown ...
 func (*Zed) ConvertDown(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	oldKind := cv.GetFromCache("v1beta2.Bar")
+	oldKind := cv.GetFromCache(&v1beta2.Bar{})
 	bar := oldKind.(*v1beta2.Bar)
 	obj, _ := in.(*Zed)
 	bar.A = obj.A

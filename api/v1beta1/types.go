@@ -1,6 +1,7 @@
 package v1beta1
 
 import (
+	"fmt"
 	"k8s.io/kubeadm/api/shared"
 )
 
@@ -51,11 +52,17 @@ func (*Foo) ConvertDownName() string {
 
 // Validate ...
 func (x *Foo) Validate() error {
+	if len(x.C) == 0 {
+		return fmt.Errorf("Foo.C cannot be empty")
+	}
 	return nil
 }
 
 // Default ...
 func (x *Foo) Default() error {
+	if len(x.C) == 0 {
+		x.C = "ccc"
+	}
 	return nil
 }
 
