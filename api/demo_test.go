@@ -13,8 +13,7 @@ var input = []byte(`
 	"apiVersion": "kubeadm.k8s.io/v1beta1",
 	"kind": "Foo",
 	"a": "aaa",
-	"b": "bbb",
-	"c": "ccc"
+	"b": "bbb"
 }
 `)
 
@@ -32,6 +31,13 @@ func TestDemo(t *testing.T) {
 		panic(err.Error())
 	}
 	t.Logf("--------%#v", obj)
+
+	if err := obj.Default(); err != nil {
+		panic(err.Error())
+	}
+	if err := obj.Validate(); err != nil {
+		panic(err.Error())
+	}
 
 	obj, _ = cv.ConvertTo(obj, "v1beta3")
 	t.Logf("--------%#v", obj)
