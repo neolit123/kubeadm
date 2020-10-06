@@ -68,50 +68,41 @@ func NewConverter(group string, versionKinds []VersionKinds) *Converter {
 }
 
 // GetObjectFromBytes ...
-func (cv *Converter) GetObjectFromBytes(input []byte) (Kind, error) {
-	if cv.unmarshalFunc == nil {
-		return nil, fmt.Errorf("unmarshal function not set")
-	}
-
-	typemeta := TypeMeta{}
-	if err := cv.unmarshalFunc(input, &typemeta); err != nil {
+func (cv *Converter) GetObjectFromBytes(typemeta *TypeMeta, input []byte) (Kind, error) {
+	kind, err := cv.GetObject(typemeta)
+	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(typemeta.APIVersion, typemeta.Kind)
+	if err := cv.unmarshalFunc(input, kind); err != nil {
+		return nil, err
+	}
 
+	return kind, nil
+}
+
+// GetObject ...
+func (cv *Converter) GetObject(typemeta *TypeMeta) (Kind, error) {
 	gv := strings.Split(typemeta.APIVersion, "/")
 	if len(gv) != 2 {
 		return nil, fmt.Errorf("malformed group/version: %s", typemeta.APIVersion)
 	}
 
-	iface := cv.GetObject(gv[1], typemeta.Kind)
-	if iface == nil {
-		return nil, fmt.Errorf("no object for version/kind: %s/%s", gv[1], typemeta.Kind)
-	}
-
-	if err := cv.unmarshalFunc(input, iface); err != nil {
-		return nil, err
-	}
-
-	return iface, nil
-}
-
-// GetObject ...
-func (cv *Converter) GetObject(version, kind string) Kind {
 	for _, vk := range cv.versionKinds {
-		if version != vk.Version {
+		if gv[1] != vk.Version {
 			continue
 		}
 		for _, k := range vk.Kinds {
-			if kind != k.Name() {
+			if typemeta.Kind != k.Name() {
 				continue
 			}
 			t := reflect.TypeOf(k)
-			return (reflect.New(t.Elem()).Interface()).(Kind)
+			kind := (reflect.New(t.Elem()).Interface()).(Kind)
+			cv.SetTypeMeta(kind)
+			return kind, nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("no object for: %+v", typemeta)
 }
 
 // DeepCopy ...
@@ -149,8 +140,6 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	version := in.Version()
 	kind := in.Name()
 
-	fmt.Println("kind", kind, "version", version)
-
 	targetVersionIdx := -1
 	for i, vk := range cv.versionKinds {
 		if targetVersion == vk.Version {
@@ -158,8 +147,6 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 			break
 		}
 	}
-
-	// fmt.Println("targetVersionIdx", targetVersionIdx)
 
 	if targetVersionIdx == -1 {
 		return nil, fmt.Errorf("unknown target version %s", targetVersion)
@@ -177,8 +164,6 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 		return nil, fmt.Errorf("unknown version %s", version)
 	}
 
-	fmt.Println("vidx", versionIdx, "targetIdx", targetVersionIdx)
-
 	// already target version
 	if versionIdx == targetVersionIdx {
 		return in, nil
@@ -188,11 +173,11 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	var err error
 
 	if versionIdx < targetVersionIdx {
-		fmt.Println("convert up")
+		// fmt.Println("convert up")
 		goto convertUp
 	}
 
-	fmt.Println("convert down")
+	// fmt.Println("convert down")
 	for i := versionIdx; i >= targetVersionIdx; i-- {
 		vk := cv.versionKinds[i]
 
@@ -203,7 +188,6 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 					return nil, fmt.Errorf("cannot convert %s/%s to %s/%s: %v", in.Version(), in.Name(), vk.Version, k.Name(), err)
 				}
 				in = out
-				// fmt.Printf("convert down %T, %p\n", in, in)
 				kind = k.ConvertUpName()
 			}
 		}
@@ -217,7 +201,6 @@ convertUp:
 		for _, k := range vk.Kinds {
 			if k.ConvertUpName() == kind {
 				out, err = k.ConvertUp(cv, in)
-				// fmt.Printf("convert up %T, %p - %T, %p\n", in, in, out, out)
 				if err != nil {
 					return nil, fmt.Errorf("cannot convert %s/%s to %s/%s: %v", in.Version(), in.Name(), vk.Version, k.Name(), err)
 				}
@@ -227,6 +210,19 @@ convertUp:
 		}
 	}
 	return out, nil
+}
+
+// GetTypeMetaFromBytes ...
+func (cv *Converter) GetTypeMetaFromBytes(input []byte) (*TypeMeta, error) {
+	if cv.unmarshalFunc == nil {
+		return nil, fmt.Errorf("unmarshal function not set")
+	}
+
+	typemeta := &TypeMeta{}
+	if err := cv.unmarshalFunc(input, typemeta); err != nil {
+		return nil, fmt.Errorf("cannot get TypeMeta: %v", err)
+	}
+	return typemeta, nil
 }
 
 // SetTypeMeta ...

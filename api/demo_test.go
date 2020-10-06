@@ -28,7 +28,11 @@ func TestDemo(t *testing.T) {
 	cv.SetUnmarshalFunc(json.Unmarshal)
 	cv.SetMarshalFunc(json.Marshal)
 
-	obj, err := cv.GetObjectFromBytes(input)
+	typemeta, err := cv.GetTypeMetaFromBytes(input)
+	if err != nil {
+		panic(err.Error())
+	}
+	obj, err := cv.GetObjectFromBytes(typemeta, input)
 	if err != nil {
 		panic(err.Error())
 	}
