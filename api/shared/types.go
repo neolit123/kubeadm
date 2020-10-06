@@ -43,6 +43,15 @@ type Converter struct {
 	marshalFunc   func(interface{}) ([]byte, error)
 }
 
+// NewConverter ...
+func NewConverter(group string, versionKinds []VersionKinds) *Converter {
+	return &Converter{
+		group:        group,
+		versionKinds: versionKinds,
+		cache:        map[string]Kind{},
+	}
+}
+
 // GetGroup ...
 func (cv *Converter) GetGroup() string {
 	return cv.group
@@ -56,15 +65,6 @@ func (cv *Converter) AddToCache(key string, kind Kind) {
 // GetFromCache ...
 func (cv *Converter) GetFromCache(key string) Kind {
 	return DeepCopy(cv.cache[key])
-}
-
-// NewConverter ...
-func NewConverter(group string, versionKinds []VersionKinds) *Converter {
-	return &Converter{
-		group:        group,
-		versionKinds: versionKinds,
-		cache:        map[string]Kind{},
-	}
 }
 
 // GetObjectFromBytes ...

@@ -4,6 +4,8 @@ import (
 	"k8s.io/kubeadm/api/shared"
 )
 
+const Version = "v1beta1"
+
 // Foo ...
 type Foo struct {
 	shared.TypeMeta `json:",inline"`
@@ -19,7 +21,7 @@ var _ shared.Kind = (*Foo)(nil)
 
 // Version ...
 func (*Foo) Version() string {
-	return "v1beta1"
+	return Version
 }
 
 // Name ...

@@ -15,19 +15,19 @@ const (
 // VersionKinds ...
 var VersionKinds = []shared.VersionKinds{
 	{
-		Version: "v1beta1",
+		Version: v1beta1.Version,
 		Kinds: []shared.Kind{
 			&v1beta1.Foo{},
 		},
 	},
 	{
-		Version: "v1beta2",
+		Version: v1beta2.Version,
 		Kinds: []shared.Kind{
 			&v1beta2.Bar{},
 		},
 	},
 	{
-		Version: "v1beta3",
+		Version: v1beta3.Version,
 		Kinds: []shared.Kind{
 			&v1beta3.Zed{},
 		},
