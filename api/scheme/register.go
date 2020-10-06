@@ -1,37 +1,35 @@
 package scheme
 
-const (
-	schemeGroup = "kubeadm.k8s.io"
-	// V1Beta1 ...
-	V1Beta1 = "v1beta1"
-	// V1Beta1Foo ...
-	V1Beta1Foo = "Foo"
-
-	// V1Beta2 ...
-	V1Beta2 = "v1beta2"
-	// V1Beta2Foo ...
-	V1Beta2Foo = "Foo"
-	// V1Beta2Bar ...
-	V1Beta2Bar = "Bar"
-
-	// V1Beta3 ...
-	V1Beta3 = "v1beta3"
-	// V1Beta3Foo ...
-	V1Beta3Foo = "Foo"
-	// V1Beta3Bar ...
-	V1Beta3Bar = "Bar"
+import (
+	"k8s.io/kubeadm/api/shared"
+	"k8s.io/kubeadm/api/v1beta1"
+	"k8s.io/kubeadm/api/v1beta2"
+	"k8s.io/kubeadm/api/v1beta3"
 )
 
-var versionKinds = map[string][]string{
-	V1Beta1: []string{
-		"Foo",
+const (
+	// Group ...
+	Group = "kubeadm.k8s.io"
+)
+
+// DefaultVersionKinds ...
+var DefaultVersionKinds = []shared.VersionKinds{
+	{
+		Version: "v1beta1",
+		Kinds: []shared.Kind{
+			&v1beta1.Foo{},
+		},
 	},
-	V1Beta2: []string{
-		"Foo",
-		"Bar",
+	{
+		Version: "v1beta2",
+		Kinds: []shared.Kind{
+			&v1beta2.Bar{},
+		},
 	},
-	V1Beta3: []string{
-		"Foo",
-		"Bar",
+	{
+		Version: "v1beta3",
+		Kinds: []shared.Kind{
+			&v1beta3.Zed{},
+		},
 	},
 }

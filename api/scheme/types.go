@@ -1,9 +1,0 @@
-package scheme
-
-// TypeMeta ...
-type TypeMeta struct {
-	// APIVersion ...
-	APIVersion string `json:"apiVersion,omitempty"`
-	// Kind ...
-	Kind string `json:"kind,omitempty"`
-}
