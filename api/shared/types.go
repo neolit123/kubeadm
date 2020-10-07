@@ -1,7 +1,6 @@
 package shared
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -60,13 +59,13 @@ func (cv *Converter) GetGroup() string {
 // AddToCache ...
 func (cv *Converter) AddToCache(kind Kind) {
 	key := fmt.Sprintf("%s.%s", kind.Version(), kind.Name())
-	cv.cache[key] = DeepCopy(kind)
+	cv.cache[key] = cv.DeepCopy(kind)
 }
 
 // GetFromCache ...
 func (cv *Converter) GetFromCache(kind Kind) Kind {
 	key := fmt.Sprintf("%s.%s", kind.Version(), kind.Name())
-	return DeepCopy(cv.cache[key])
+	return cv.DeepCopy(cv.cache[key])
 }
 
 // ClearCache ...
@@ -120,17 +119,16 @@ func (cv *Converter) NewObject(kind Kind) Kind {
 }
 
 // DeepCopy ...
-func DeepCopy(src Kind) Kind {
+func (cv *Converter) DeepCopy(src Kind) Kind {
 	if src == nil {
 		panic("nil value passed to DeepCopy")
 	}
-	bytes, err := json.Marshal(src)
+	bytes, err := cv.Marshal(src)
 	if err != nil {
 		panic("error marshal: " + err.Error())
 	}
-	t := reflect.TypeOf(src)
-	dst := (reflect.New(t.Elem()).Interface()).(Kind)
-	if err := json.Unmarshal(bytes, dst); err != nil {
+	dst := cv.NewObject(src)
+	if err := cv.Unmarshal(bytes, dst); err != nil {
 		panic("error unmarshal: " + err.Error())
 	}
 	return dst
