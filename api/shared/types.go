@@ -136,15 +136,6 @@ func DeepCopy(src Kind) Kind {
 	return dst
 }
 
-// ConvertToLatest ...
-func (cv *Converter) ConvertToLatest(in Kind) (Kind, error) {
-	if len(cv.versionKinds) == 0 {
-		return nil, fmt.Errorf("no versions to convert to")
-	}
-	latest := cv.versionKinds[len(cv.versionKinds)-1]
-	return cv.ConvertTo(in, latest.Version)
-}
-
 // ConvertTo ...
 func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	if len(cv.versionKinds) == 0 {
@@ -225,6 +216,15 @@ convertUp:
 	return out, nil
 }
 
+// ConvertToLatest ...
+func (cv *Converter) ConvertToLatest(in Kind) (Kind, error) {
+	if len(cv.versionKinds) == 0 {
+		return nil, fmt.Errorf("no versions to convert to")
+	}
+	latest := cv.versionKinds[len(cv.versionKinds)-1]
+	return cv.ConvertTo(in, latest.Version)
+}
+
 // GetTypeMetaFromBytes ...
 func (cv *Converter) GetTypeMetaFromBytes(input []byte) (*TypeMeta, error) {
 	if cv.unmarshalFunc == nil {
@@ -242,7 +242,7 @@ func (cv *Converter) GetTypeMetaFromBytes(input []byte) (*TypeMeta, error) {
 func (cv *Converter) SetTypeMeta(kind Kind) {
 	typemeta := kind.GetTypeMeta()
 	typemeta.APIVersion = cv.group + "/" + kind.Version()
-	typemeta.Kind = kind.ConvertDownName()
+	typemeta.Kind = kind.Name()
 }
 
 // SetMarshalFunc ...
