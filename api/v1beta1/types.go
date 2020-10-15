@@ -2,14 +2,17 @@ package v1beta1
 
 import (
 	"fmt"
+
+	"k8s.io/kubeadm/api/external/metav1"
 	"k8s.io/kubeadm/api/shared"
 )
 
+// Version ...
 const Version = "v1beta1"
 
 // Foo ...
 type Foo struct {
-	shared.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
 	// A ...
 	A string `json:"a,omitempty"`
 	// B ...
@@ -67,6 +70,6 @@ func (x *Foo) Default() error {
 }
 
 // GetTypeMeta ...
-func (x *Foo) GetTypeMeta() *shared.TypeMeta {
+func (x *Foo) GetTypeMeta() *metav1.TypeMeta {
 	return &x.TypeMeta
 }

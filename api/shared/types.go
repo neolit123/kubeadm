@@ -4,15 +4,9 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-)
 
-// TypeMeta ...
-type TypeMeta struct {
-	// APIVersion ...
-	APIVersion string `json:"apiVersion,omitempty"`
-	// Kind ...
-	Kind string `json:"kind,omitempty"`
-}
+	"k8s.io/kubeadm/api/external/metav1"
+)
 
 // Kind ...
 type Kind interface {
@@ -24,7 +18,7 @@ type Kind interface {
 	ConvertDownName() string
 	Validate() error
 	Default() error
-	GetTypeMeta() *TypeMeta
+	GetTypeMeta() *metav1.TypeMeta
 }
 
 // VersionKinds ...
@@ -76,7 +70,7 @@ func (cv *Converter) ClearCache() {
 }
 
 // GetObjectFromBytes ...
-func (cv *Converter) GetObjectFromBytes(typemeta *TypeMeta, input []byte) (Kind, error) {
+func (cv *Converter) GetObjectFromBytes(typemeta *metav1.TypeMeta, input []byte) (Kind, error) {
 	kind, err := cv.GetObject(typemeta)
 	if err != nil {
 		return nil, err
@@ -90,7 +84,7 @@ func (cv *Converter) GetObjectFromBytes(typemeta *TypeMeta, input []byte) (Kind,
 }
 
 // GetObject ...
-func (cv *Converter) GetObject(typemeta *TypeMeta) (Kind, error) {
+func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 	gv := strings.Split(typemeta.APIVersion, "/")
 	if len(gv) != 2 {
 		return nil, fmt.Errorf("malformed group/version: %s", typemeta.APIVersion)
@@ -224,12 +218,12 @@ func (cv *Converter) ConvertToLatest(in Kind) (Kind, error) {
 }
 
 // GetTypeMetaFromBytes ...
-func (cv *Converter) GetTypeMetaFromBytes(input []byte) (*TypeMeta, error) {
+func (cv *Converter) GetTypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error) {
 	if cv.unmarshalFunc == nil {
 		return nil, fmt.Errorf("unmarshal function not set")
 	}
 
-	typemeta := &TypeMeta{}
+	typemeta := &metav1.TypeMeta{}
 	if err := cv.unmarshalFunc(input, typemeta); err != nil {
 		return nil, fmt.Errorf("cannot get TypeMeta: %v", err)
 	}
