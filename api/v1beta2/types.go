@@ -1,9 +1,9 @@
 package v1beta2
 
 import (
-	"k8s.io/kubeadm/api/external/metav1"
-	"k8s.io/kubeadm/api/shared"
-	"k8s.io/kubeadm/api/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/kubeadm/api/pkg"
 )
 
 // Version ...
@@ -18,7 +18,7 @@ type Bar struct {
 	B string `json:"b,omitempty"`
 }
 
-var _ shared.Kind = (*Bar)(nil)
+var _ pkg.Kind = (*Bar)(nil)
 
 // Version ...
 func (*Bar) Version() string {
@@ -31,24 +31,30 @@ func (*Bar) Name() string {
 }
 
 // ConvertUp ...
-func (*Bar) ConvertUp(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	cv.AddToCache(in)
-	obj, _ := in.(*v1beta1.Foo)
-	out := &Bar{}
-	cv.SetTypeMeta(out)
-	out.A = obj.A
-	out.B = obj.B
-	return out, nil
+func (*Bar) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	/*
+		cv.AddToCache(in)
+		obj, _ := in.(*v1beta1.Foo)
+		out := &Bar{}
+		cv.SetTypeMeta(out)
+		out.A = obj.A
+		out.B = obj.B
+		return out, ni
+	*/
+	return nil, nil
 }
 
 // ConvertDown ...
-func (*Bar) ConvertDown(cv *shared.Converter, in shared.Kind) (shared.Kind, error) {
-	oldKind := cv.GetFromCache(&v1beta1.Foo{})
-	foo := oldKind.(*v1beta1.Foo)
-	obj, _ := in.(*Bar)
-	foo.A = obj.A
-	foo.B = obj.B
-	return foo, nil
+func (*Bar) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	/*
+		oldKind := cv.GetFromCache(&v1beta1.Foo{})
+		foo := oldKind.(*v1beta1.Foo)
+		obj, _ := in.(*Bar)
+		foo.A = obj.A
+		foo.B = obj.B
+		return foo, nil
+	*/
+	return nil, nil
 }
 
 // ConvertUpName ...

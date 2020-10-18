@@ -1,11 +1,11 @@
-package shared
+package pkg
 
 import (
 	"fmt"
 	"reflect"
 	"strings"
 
-	"k8s.io/kubeadm/api/external/metav1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Kind ...
