@@ -25,7 +25,10 @@ var VersionKinds = []pkg.VersionKinds{
 	{
 		Version: v1beta2.Version,
 		Kinds: []pkg.Kind{
-			&v1beta2.Bar{},
+			&v1beta2.InitConfiguration{},
+			&v1beta2.ClusterConfiguration{},
+			&v1beta2.ClusterStatus{},
+			&v1beta2.JoinConfiguration{},
 		},
 	},
 }

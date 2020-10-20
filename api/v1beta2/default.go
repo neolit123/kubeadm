@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1beta2
 
 import (
 	"net/url"
@@ -37,8 +37,6 @@ const (
 	DefaultAPIBindPort = 6443
 	// DefaultImageRepository defines default image registry
 	DefaultImageRepository = "k8s.gcr.io"
-	// DefaultManifestsDir defines default manifests directory
-	DefaultManifestsDir = "/etc/kubernetes/manifests"
 	// DefaultClusterName defines the default cluster name
 	DefaultClusterName = "kubernetes"
 
@@ -72,7 +70,6 @@ var (
 
 // Default ...
 func (obj *InitConfiguration) Default() error {
-	obj.ClusterConfiguration.Default()
 	SetDefaultsBootstrapTokens(obj)
 	SetDefaultsAPIEndpoint(&obj.LocalAPIEndpoint)
 	return nil

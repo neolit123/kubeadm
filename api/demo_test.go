@@ -10,7 +10,7 @@ import (
 
 var input = []byte(`
 {
-	"apiVersion": "kubeadm.k8s.io/v1beta1",
+	"apiVersion": "kubeadm.k8s.io/v1beta2",
 	"kind": "ClusterConfiguration",
 	"kubernetesVersion": "foo"
 }
@@ -38,17 +38,11 @@ func TestDemo(t *testing.T) {
 		panic(err.Error())
 	}
 
-	// obj, _ = cv.ConvertTo(obj, "v1beta3")
-	// t.Logf("--------%#v", obj)
+	obj, _ = cv.ConvertTo(obj, "v1beta1")
+	t.Logf("--------%#v", obj)
 
-	// obj, _ = cv.ConvertTo(obj, "v1beta1")
-	// t.Logf("--------%#v", obj)
-
-	// obj, _ = cv.ConvertTo(obj, "v1beta2")
-	// t.Logf("--------%#v", obj)
-
-	// obj, err = obj.ConvertDown(cv, obj)
-	// t.Logf("--------%#v", obj)
+	obj, _ = cv.ConvertTo(obj, "v1beta2")
+	t.Logf("--------%#v", obj)
 
 	data, err := cv.Marshal(obj)
 	if err != nil {

@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,16 +19,13 @@ package v1beta1
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/kubeadm/api/shared"
 )
 
-// Version ...
-const Version = "v1beta1"
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// DEPRECATED - This group version of InitConfiguration is deprecated by apis/kubeadm/v1beta2/InitConfiguration.
 // InitConfiguration contains a list of elements that is specific "kubeadm init"-only runtime
 // information.
-// This group version of InitConfiguration is deprecated by apis/kubeadm/v1beta2/InitConfiguration.
 type InitConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -58,8 +55,10 @@ type InitConfiguration struct {
 	LocalAPIEndpoint APIEndpoint `json:"localAPIEndpoint,omitempty"`
 }
 
-// ClusterConfiguration contains cluster-wide configuration for a kubeadm cluster
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // DEPRECATED - This group version of ClusterConfiguration is deprecated by apis/kubeadm/v1beta2/ClusterConfiguration.
+// ClusterConfiguration contains cluster-wide configuration for a kubeadm cluster
 type ClusterConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 
@@ -174,6 +173,8 @@ type ImageMeta struct {
 	//TODO: evaluate if we need also a ImageName based on user feedbacks
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // ClusterStatus contains the cluster status. The ClusterStatus will be stored in the kubeadm-config
 // ConfigMap in the cluster, and then updated by kubeadm when additional control plane instance joins or leaves the cluster.
 type ClusterStatus struct {
@@ -230,7 +231,7 @@ type Networking struct {
 type BootstrapToken struct {
 	// Token is used for establishing bidirectional trust between nodes and control-planes.
 	// Used for joining nodes in the cluster.
-	Token *shared.BootstrapTokenString `json:"token"`
+	Token *BootstrapTokenString `json:"token"`
 	// Description sets a human-friendly message why this token exists and what it's used
 	// for, so other administrators can know its purpose.
 	Description string `json:"description,omitempty"`
@@ -298,8 +299,10 @@ type ExternalEtcd struct {
 	KeyFile string `json:"keyFile"`
 }
 
-// JoinConfiguration contains elements describing a particular node.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // DEPRECATED - This group version of JoinConfiguration is deprecated by apis/kubeadm/v1beta2/JoinConfiguration.
+// JoinConfiguration contains elements describing a particular node.
 type JoinConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 

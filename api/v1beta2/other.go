@@ -1,11 +1,11 @@
-package v1beta1
+package v1beta2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Version ...
-const Version = "v1beta1"
+const Version = "v1beta2"
 
 // GetTypeMeta ...
 func (x *InitConfiguration) GetTypeMeta() *metav1.TypeMeta {
