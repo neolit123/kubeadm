@@ -58,7 +58,7 @@ func TestDemo(t *testing.T) {
 		panic(err.Error())
 	}
 
-	original, err := cv.Marshal(obj)
+	old, err := cv.Marshal(obj)
 	if err != nil {
 		panic("marshal" + err.Error())
 	}
@@ -86,9 +86,9 @@ func TestDemo(t *testing.T) {
 		panic("marshal" + err.Error())
 	}
 
-	if !bytes.Equal(original, new) {
+	if !bytes.Equal(old, new) {
 		panic("could not roundtrip")
 	}
 
-	t.Logf("\n5-------- %s\n", data)
+	t.Logf("\n5-------- %s\n", new)
 }
