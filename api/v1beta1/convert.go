@@ -43,13 +43,13 @@ func (*InitConfiguration) ConvertDownName() string {
 // -------
 
 // ConvertUp ...
-func (*ClusterConfiguration) ConvertUp(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*ClusterConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertDown ...
-func (*ClusterConfiguration) ConvertDown(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertUpName ...

@@ -18,16 +18,30 @@ package v1beta2
 
 import (
 	"k8s.io/kubeadm/api/pkg"
+	"k8s.io/kubeadm/api/v1beta1"
 )
 
 // ConvertUp ...
-func (*InitConfiguration) ConvertUp(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	new := &InitConfiguration{}
+	cv.DeepCopy(new, in)
+	// restore from cache
+	cachedKind := cv.GetFromCache(new)
+	if cachedKind != nil {
+		cached := cachedKind.(*InitConfiguration)
+		new.CertificateKey = cached.CertificateKey
+		new.NodeRegistration.IgnorePreflightErrors = make([]string, len(cached.NodeRegistration.IgnorePreflightErrors))
+		copy(new.NodeRegistration.IgnorePreflightErrors, cached.NodeRegistration.IgnorePreflightErrors)
+	}
+	return new, nil
 }
 
 // ConvertDown ...
-func (*InitConfiguration) ConvertDown(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	cv.AddToCache(in)
+	new := &v1beta1.InitConfiguration{}
+	cv.DeepCopy(new, in)
+	return new, nil
 }
 
 // ConvertUpName ...
