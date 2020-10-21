@@ -72,6 +72,7 @@ var (
 func (obj *InitConfiguration) Default() error {
 	SetDefaultsBootstrapTokens(obj)
 	SetDefaultsAPIEndpoint(&obj.LocalAPIEndpoint)
+	SetDefaultsNodeRegistrationOptions(&obj.NodeRegistration) // FORK
 	return nil
 }
 
@@ -121,6 +122,7 @@ func (obj *JoinConfiguration) Default() error {
 
 	SetDefaultsJoinControlPlane(obj.ControlPlane)
 	SetDefaultsDiscovery(&obj.Discovery)
+	SetDefaultsNodeRegistrationOptions(&obj.NodeRegistration) // FORK
 
 	return nil
 }
@@ -226,5 +228,13 @@ func SetDefaultsBootstrapToken(bt *BootstrapToken) {
 func SetDefaultsAPIEndpoint(obj *APIEndpoint) {
 	if obj.BindPort == 0 {
 		obj.BindPort = DefaultAPIBindPort
+		obj.AdvertiseAddress = "0.0.0.0" // FORK
 	}
+}
+
+// SetDefaultsNodeRegistrationOptions sets the defaults for a NodeRegistrationOptions
+// FORK: do we want to default to dummy values?
+func SetDefaultsNodeRegistrationOptions(obj *NodeRegistrationOptions) {
+	obj.Name = "node"
+	obj.CRISocket = DefaultURLScheme + "://unknown"
 }
