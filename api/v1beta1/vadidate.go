@@ -221,7 +221,7 @@ func ValidateBootstrapTokens(bts []BootstrapToken, fldPath *field.Path) field.Er
 	allErrs := field.ErrorList{}
 	for i, bt := range bts {
 		btPath := fldPath.Child(fmt.Sprintf("%d", i))
-		if bt.Token != nil {
+		if bt.Token != nil { // changed in FORK
 			allErrs = append(allErrs, ValidateToken(bt.Token.String(), btPath.Child(shared.TokenStr))...)
 		}
 		allErrs = append(allErrs, ValidateTokenUsages(bt.Usages, btPath.Child(shared.TokenUsages))...)

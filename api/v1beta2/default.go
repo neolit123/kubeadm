@@ -47,7 +47,7 @@ const (
 	// DefaultDiscoveryTimeout specifies the default discovery timeout for kubeadm (used unless one is specified in the JoinConfiguration)
 	DefaultDiscoveryTimeout = 5 * time.Minute
 
-	// COPIED FROM CONSTANTS
+	// FORK; COPIED FROM CONSTANTS
 
 	// DefaultControlPlaneTimeout ...
 	DefaultControlPlaneTimeout = 4 * time.Minute
