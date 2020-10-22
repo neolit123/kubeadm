@@ -452,7 +452,7 @@ func ValidateAbsolutePath(path string, fldPath *field.Path) field.ErrorList {
 func ValidateFeatureGates(featureGates map[string]bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// UNSUPPORTED? FGs are component bound...
+	// FORK; UNSUPPORTED? FGs are component bound...
 
 	return allErrs
 }

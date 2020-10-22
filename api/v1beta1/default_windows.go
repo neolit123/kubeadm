@@ -26,5 +26,5 @@ const (
 	// DefaultCACertPath defines default location of CA certificate on Windows
 	DefaultCACertPath = "C:/etc/kubernetes/pki/ca.crt"
 	// DefaultURLScheme defines default socket url prefix
-	DefaultURLScheme = "npipe"
+	DefaultURLScheme = "npipe" // FORK; "Url->URL" rename
 )

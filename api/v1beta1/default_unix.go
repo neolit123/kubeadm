@@ -26,5 +26,5 @@ const (
 	// DefaultCACertPath defines default location of CA certificate on Linux
 	DefaultCACertPath = "/etc/kubernetes/pki/ca.crt"
 	// DefaultURLScheme defines default socket url prefix
-	DefaultURLScheme = "unix"
+	DefaultURLScheme = "unix" // FORK; "Url->URL" rename
 )
