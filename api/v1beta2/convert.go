@@ -57,13 +57,17 @@ func (*InitConfiguration) ConvertDownName() string {
 // -------
 
 // ConvertUp ...
-func (*ClusterConfiguration) ConvertUp(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*ClusterConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	new := &ClusterConfiguration{}
+	cv.DeepCopy(new, in)
+	return new, nil
 }
 
 // ConvertDown ...
-func (*ClusterConfiguration) ConvertDown(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	new := &v1beta1.ClusterConfiguration{}
+	cv.DeepCopy(new, in)
+	return new, nil
 }
 
 // ConvertUpName ...
@@ -79,13 +83,13 @@ func (*ClusterConfiguration) ConvertDownName() string {
 // -------
 
 // ConvertUp ...
-func (*ClusterStatus) ConvertUp(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*ClusterStatus) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertDown ...
-func (*ClusterStatus) ConvertDown(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertUpName ...
@@ -101,13 +105,25 @@ func (*ClusterStatus) ConvertDownName() string {
 // -------
 
 // ConvertUp ...
-func (*JoinConfiguration) ConvertUp(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	new := &JoinConfiguration{}
+	cv.DeepCopy(new, in)
+	// restore from cache
+	cachedKind := cv.GetFromCache(new)
+	if cachedKind != nil {
+		cached := cachedKind.(*JoinConfiguration)
+		new.NodeRegistration.IgnorePreflightErrors = make([]string, len(cached.NodeRegistration.IgnorePreflightErrors))
+		copy(new.NodeRegistration.IgnorePreflightErrors, cached.NodeRegistration.IgnorePreflightErrors)
+	}
+	return new, nil
 }
 
 // ConvertDown ...
-func (*JoinConfiguration) ConvertDown(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	cv.AddToCache(in)
+	new := &v1beta1.JoinConfiguration{}
+	cv.DeepCopy(new, in)
+	return new, nil
 }
 
 // ConvertUpName ...
