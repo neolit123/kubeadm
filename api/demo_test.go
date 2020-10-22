@@ -75,7 +75,7 @@ func TestDemo(t *testing.T) {
 
 	docs, err := cv.SplitDocuments(input)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
 	t.Log("len of docs:", len(docs))
 
@@ -83,47 +83,47 @@ func TestDemo(t *testing.T) {
 
 		typemeta, err := cv.GetTypeMetaFromBytes(doc)
 		if err != nil {
-			t.Fatal(err.Error())
+			t.Fatal(err)
 		}
 		obj, err := cv.GetObjectFromBytes(typemeta, doc)
 		if err != nil {
-			t.Fatal(err.Error())
+			t.Fatal(err)
 		}
 		t.Logf("\n1--------%#v\n", obj)
 
 		if err := obj.Default(); err != nil {
-			t.Fatal(err.Error())
+			t.Fatal(err)
 		}
 		if err := obj.Validate(); err != nil {
-			t.Fatal(err.Error())
+			t.Fatal(err)
 		}
 
 		old, err := cv.Marshal(obj)
 		if err != nil {
-			t.Fatal("marshal" + err.Error())
+			t.Fatal("marshal", err)
 		}
 
 		obj, err = cv.ConvertTo(obj, "v1beta1")
 		if err != nil {
-			t.Fatal(err.Error())
+			t.Fatal(err)
 		}
 		t.Logf("\n2-------- %#v\n", obj)
 
 		data, err := cv.Marshal(obj)
 		if err != nil {
-			t.Fatal("marshal" + err.Error())
+			t.Fatal("marshal", err)
 		}
 		t.Logf("\n3-------- %s\n", data)
 
 		obj, err = cv.ConvertTo(obj, "v1beta2")
 		if err != nil {
-			t.Fatal(err.Error())
+			t.Fatal(err)
 		}
 		t.Logf("\n4-------- %#v\n", obj)
 
 		new, err := cv.Marshal(obj)
 		if err != nil {
-			t.Fatal("marshal" + err.Error())
+			t.Fatal("marshal", err)
 		}
 
 		if !bytes.Equal(old, new) {
