@@ -105,7 +105,9 @@ func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 			if typemeta.Kind != k.Name() {
 				continue
 			}
-			return cv.NewObject(k), nil
+			new := cv.NewObject(k)
+			cv.SetTypeMeta(new)
+			return new, nil
 		}
 	}
 	return nil, errors.Errorf("no object for: %+v", typemeta)
@@ -114,9 +116,7 @@ func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 // NewObject ...
 func (cv *Converter) NewObject(kind Kind) Kind {
 	t := reflect.TypeOf(kind)
-	k := (reflect.New(t.Elem()).Interface()).(Kind)
-	cv.SetTypeMeta(k)
-	return k
+	return (reflect.New(t.Elem()).Interface()).(Kind)
 }
 
 // DeepCopy ...
@@ -134,9 +134,7 @@ func (cv *Converter) DeepCopy(dst Kind, src Kind) Kind {
 	if err := cv.Unmarshal(bytes, dst); err != nil {
 		panic("error unmarshal: " + err.Error())
 	}
-	if dst != nil {
-		cv.SetTypeMeta(dst)
-	}
+	cv.SetTypeMeta(dst)
 	return dst
 }
 
