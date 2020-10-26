@@ -21,8 +21,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"k8s.io/kubeadm/api/kubeadm/scheme"
 	"k8s.io/kubeadm/api/pkg"
-	"k8s.io/kubeadm/api/scheme"
 )
 
 var input = []byte(`

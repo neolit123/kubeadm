@@ -17,8 +17,8 @@ limitations under the License.
 package v1beta2
 
 import (
+	"k8s.io/kubeadm/api/kubeadm/v1beta1"
 	"k8s.io/kubeadm/api/pkg"
-	"k8s.io/kubeadm/api/v1beta1"
 )
 
 // ConvertUp ...
