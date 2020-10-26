@@ -21,23 +21,18 @@ import (
 )
 
 // ConvertUp ...
-func (*InitConfiguration) ConvertUp(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertDown ...
-func (*InitConfiguration) ConvertDown(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertUpName ...
-func (*InitConfiguration) ConvertUpName() string {
-	return "InitConfiguration"
-}
-
-// ConvertDownName ...
-func (*InitConfiguration) ConvertDownName() string {
-	return "InitConfiguration"
+func (c *InitConfiguration) ConvertUpName() string {
+	return ""
 }
 
 // -------
@@ -54,54 +49,39 @@ func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Ki
 
 // ConvertUpName ...
 func (*ClusterConfiguration) ConvertUpName() string {
-	return "ClusterConfiguration"
-}
-
-// ConvertDownName ...
-func (*ClusterConfiguration) ConvertDownName() string {
-	return "ClusterConfiguration"
+	return ""
 }
 
 // -------
 
 // ConvertUp ...
-func (*ClusterStatus) ConvertUp(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*ClusterStatus) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertDown ...
-func (*ClusterStatus) ConvertDown(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertUpName ...
 func (*ClusterStatus) ConvertUpName() string {
-	return "ClusterStatus"
-}
-
-// ConvertDownName ...
-func (*ClusterStatus) ConvertDownName() string {
-	return "ClusterStatus"
+	return ""
 }
 
 // -------
 
 // ConvertUp ...
-func (*JoinConfiguration) ConvertUp(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertDown ...
-func (*JoinConfiguration) ConvertDown(*pkg.Converter, pkg.Kind) (pkg.Kind, error) {
-	return nil, nil
+func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+	return in, nil
 }
 
 // ConvertUpName ...
 func (*JoinConfiguration) ConvertUpName() string {
-	return "JoinConfiguration"
-}
-
-// ConvertDownName ...
-func (*JoinConfiguration) ConvertDownName() string {
-	return "JoinConfiguration"
+	return ""
 }

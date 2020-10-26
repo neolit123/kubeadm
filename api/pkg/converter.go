@@ -145,22 +145,10 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	if len(cv.versionKinds) == 0 {
 		return nil, errors.New("no versions to convert to in scheme")
 	}
-
 	version := in.Version()
-	kind := in.Name()
+	kindName := in.Name()
 
-	targetVersionIdx := -1
-	for i, vk := range cv.versionKinds {
-		if targetVersion == vk.Version {
-			targetVersionIdx = i
-			break
-		}
-	}
-
-	if targetVersionIdx == -1 {
-		return nil, errors.Errorf("unknown target version %s", targetVersion)
-	}
-
+	// get the current version index
 	versionIdx := -1
 	for i := 0; i < len(cv.versionKinds); i++ {
 		vk := cv.versionKinds[i]
@@ -173,6 +161,18 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 		return nil, errors.Errorf("unknown version %s", version)
 	}
 
+	// get the target version index
+	targetVersionIdx := -1
+	for i, vk := range cv.versionKinds {
+		if targetVersion == vk.Version {
+			targetVersionIdx = i
+			break
+		}
+	}
+	if targetVersionIdx == -1 {
+		return nil, errors.Errorf("unknown target version %s", targetVersion)
+	}
+
 	// already target version
 	if versionIdx == targetVersionIdx {
 		return in, nil
@@ -180,44 +180,41 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 
 	var out = in
 	var err error
-
 	if versionIdx < targetVersionIdx {
-		// fmt.Println("convert up")
 		goto convertUp
 	}
 
-	// fmt.Printf("versionIdx: %d, targetVersionIdx: %d\n", versionIdx, targetVersionIdx)
-	// fmt.Println("convert down")
-
+	// To convert down, iterate from the current version until the target version is reached.
 	for i := versionIdx; i > targetVersionIdx; i-- {
 		vk := cv.versionKinds[i]
-
 		for _, k := range vk.Kinds {
-			if k.ConvertDownName() == kind {
-				// fmt.Printf("version: %#v\n", k.Version())
+			if k.Name() == kindName {
 				out, err = k.ConvertDown(cv, in)
 				if err != nil {
-					return nil, errors.Wrapf(err, "cannot convert %s/%s to %s/%s", in.Version(), in.Name(), vk.Version, k.Name())
+					return nil, errors.Wrapf(err, "cannot convert %s/%s to %s/%s",
+						in.Version(), in.Name(), vk.Version, k.Name())
 				}
-				// fmt.Printf("out: %#v\n", out)
 				in = out
-				kind = k.ConvertUpName()
+				kindName = k.ConvertUpName()
 			}
 		}
 	}
 	return out, nil
+
+	// To convert up, iterate from the current version index + 1 (next version) until the target
+	// version is reached (including).
 convertUp:
 	for i := versionIdx + 1; i < targetVersionIdx+1; i++ {
 		vk := cv.versionKinds[i]
-
 		for _, k := range vk.Kinds {
-			if k.ConvertUpName() == kind {
+			if k.ConvertUpName() == kindName {
 				out, err = k.ConvertUp(cv, in)
 				if err != nil {
-					return nil, errors.Wrapf(err, "cannot convert %s/%s to %s/%s", in.Version(), in.Name(), vk.Version, k.Name())
+					return nil, errors.Wrapf(err, "cannot convert %s/%s to %s/%s",
+						in.Version(), in.Name(), vk.Version, k.Name())
 				}
 				in = out
-				kind = k.ConvertDownName()
+				kindName = k.Name()
 			}
 		}
 	}
