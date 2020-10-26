@@ -24,6 +24,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
@@ -92,7 +94,7 @@ func (cv *Converter) GetObjectFromBytes(typemeta *metav1.TypeMeta, input []byte)
 func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 	gv := strings.Split(typemeta.APIVersion, "/")
 	if len(gv) != 2 {
-		return nil, fmt.Errorf("malformed group/version: %s", typemeta.APIVersion)
+		return nil, errors.Errorf("malformed group/version: %s", typemeta.APIVersion)
 	}
 
 	for _, vk := range cv.versionKinds {
@@ -106,7 +108,7 @@ func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 			return cv.NewObject(k), nil
 		}
 	}
-	return nil, fmt.Errorf("no object for: %+v", typemeta)
+	return nil, errors.Errorf("no object for: %+v", typemeta)
 }
 
 // NewObject ...
@@ -141,7 +143,7 @@ func (cv *Converter) DeepCopy(dst Kind, src Kind) Kind {
 // ConvertTo ...
 func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	if len(cv.versionKinds) == 0 {
-		return nil, fmt.Errorf("no versions to convert to")
+		return nil, errors.New("no versions to convert to in scheme")
 	}
 
 	version := in.Version()
@@ -156,7 +158,7 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	}
 
 	if targetVersionIdx == -1 {
-		return nil, fmt.Errorf("unknown target version %s", targetVersion)
+		return nil, errors.Errorf("unknown target version %s", targetVersion)
 	}
 
 	versionIdx := -1
@@ -168,7 +170,7 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 		}
 	}
 	if versionIdx == -1 {
-		return nil, fmt.Errorf("unknown version %s", version)
+		return nil, errors.Errorf("unknown version %s", version)
 	}
 
 	// already target version
@@ -195,7 +197,7 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 				// fmt.Printf("version: %#v\n", k.Version())
 				out, err = k.ConvertDown(cv, in)
 				if err != nil {
-					return nil, fmt.Errorf("cannot convert %s/%s to %s/%s: %v", in.Version(), in.Name(), vk.Version, k.Name(), err)
+					return nil, errors.Wrapf(err, "cannot convert %s/%s to %s/%s", in.Version(), in.Name(), vk.Version, k.Name())
 				}
 				// fmt.Printf("out: %#v\n", out)
 				in = out
@@ -212,7 +214,7 @@ convertUp:
 			if k.ConvertUpName() == kind {
 				out, err = k.ConvertUp(cv, in)
 				if err != nil {
-					return nil, fmt.Errorf("cannot convert %s/%s to %s/%s: %v", in.Version(), in.Name(), vk.Version, k.Name(), err)
+					return nil, errors.Wrapf(err, "cannot convert %s/%s to %s/%s", in.Version(), in.Name(), vk.Version, k.Name())
 				}
 				in = out
 				kind = k.ConvertDownName()
@@ -225,7 +227,7 @@ convertUp:
 // ConvertToLatest ...
 func (cv *Converter) ConvertToLatest(in Kind) (Kind, error) {
 	if len(cv.versionKinds) == 0 {
-		return nil, fmt.Errorf("no versions to convert to")
+		return nil, errors.New("no versions to convert to in scheme")
 	}
 	latest := cv.versionKinds[len(cv.versionKinds)-1]
 	return cv.ConvertTo(in, latest.Version)
@@ -233,13 +235,12 @@ func (cv *Converter) ConvertToLatest(in Kind) (Kind, error) {
 
 // GetTypeMetaFromBytes ...
 func (cv *Converter) GetTypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error) {
-	if cv.unmarshalFunc == nil {
-		return nil, fmt.Errorf("unmarshal function not set")
-	}
-
 	typemeta := &metav1.TypeMeta{}
+	if cv.unmarshalFunc == nil {
+		return nil, errors.New("unmarshal function not set")
+	}
 	if err := cv.unmarshalFunc(input, typemeta); err != nil {
-		return nil, fmt.Errorf("cannot get TypeMeta: %v", err)
+		return nil, errors.Wrap(err, "cannot get TypeMeta")
 	}
 	return typemeta, nil
 }
@@ -264,7 +265,7 @@ func (cv *Converter) SetUnmarshalFunc(f func([]byte, interface{}) error) {
 // Marshal ...
 func (cv *Converter) Marshal(k Kind) ([]byte, error) {
 	if cv.marshalFunc == nil {
-		return nil, fmt.Errorf("marshal function not set")
+		return nil, errors.New("marshal function not set")
 	}
 	return cv.marshalFunc(k)
 }
@@ -272,7 +273,7 @@ func (cv *Converter) Marshal(k Kind) ([]byte, error) {
 // Unmarshal ...
 func (cv *Converter) Unmarshal(b []byte, k Kind) error {
 	if cv.unmarshalFunc == nil {
-		return fmt.Errorf("unmarshal function not set")
+		return errors.New("unmarshal function not set")
 	}
 	return cv.unmarshalFunc(b, k)
 }
