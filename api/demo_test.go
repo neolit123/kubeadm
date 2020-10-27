@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"k8s.io/kubeadm/api/kubeadm/scheme"
+	"k8s.io/kubeadm/api/kubeadm/v1beta2"
 	"k8s.io/kubeadm/api/pkg"
 )
 
@@ -31,7 +32,12 @@ var input = []byte(`
 	"kind": "InitConfiguration",
 	"certificateKey": "foo",
 	"nodeRegistration": {
-		"ignorePreflightErrors": ["bar"]
+		"ignorePreflightErrors": ["bar"],
+		"name": "foo",
+		"criSocket": "` + v1beta2.DefaultURLScheme + `://foo"
+	},
+	"localAPIEndpoint": {
+		"advertiseAddress": "127.0.0.1"
 	}
 }
 ---
@@ -45,7 +51,9 @@ var input = []byte(`
 	"apiVersion": "kubeadm.k8s.io/v1beta2",
 	"kind": "JoinConfiguration",
 	"nodeRegistration": {
-		"ignorePreflightErrors": ["bar"]
+		"ignorePreflightErrors": ["bar"],
+		"name": "foo",
+		"criSocket": "` + v1beta2.DefaultURLScheme + `://foo"
 	},
 	"discovery": {
 		"bootstrapToken": {

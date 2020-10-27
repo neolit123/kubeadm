@@ -43,6 +43,7 @@ type Kind interface {
 	// Default must define the defaulting function for this Kind.
 	Default() error
 	// GetTypeMeta must return a pointer to the TypeMeta structure for this API object.
+	// Returning nil here would trip the converter logic.
 	GetTypeMeta() *metav1.TypeMeta
 }
 

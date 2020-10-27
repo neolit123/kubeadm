@@ -70,17 +70,42 @@ var (
 	DefaultTokenGroups = []string{NodeBootstrapTokenAuthGroup}
 )
 
+// ---------------------
+
 // Default ...
 func (obj *InitConfiguration) Default() error {
-	obj.ClusterConfiguration.Default()
-	SetDefaultsBootstrapTokens(obj)
-	SetDefaultsAPIEndpoint(&obj.LocalAPIEndpoint)
-	SetDefaultsNodeRegistrationOptions(&obj.NodeRegistration) // FORK
+	SetDefaultsInitConfiguration(obj)
 	return nil
 }
 
 // Default ...
 func (obj *ClusterConfiguration) Default() error {
+	SetDefaultsClusterConfiguration(obj)
+	return nil
+}
+
+// Default ...
+func (obj *ClusterStatus) Default() error {
+	return nil
+}
+
+// Default ...
+func (obj *JoinConfiguration) Default() error {
+	SetDefaultsJoinConfiguration(obj)
+	return nil
+}
+
+// ---------------------
+
+// SetDefaultsInitConfiguration assigns default values for the InitConfiguration
+func SetDefaultsInitConfiguration(obj *InitConfiguration) {
+	SetDefaultsClusterConfiguration(&obj.ClusterConfiguration)
+	SetDefaultsBootstrapTokens(obj)
+	SetDefaultsAPIEndpoint(&obj.LocalAPIEndpoint)
+}
+
+// SetDefaultsClusterConfiguration assigns default values for the ClusterConfiguration
+func SetDefaultsClusterConfiguration(obj *ClusterConfiguration) {
 	if obj.KubernetesVersion == "" {
 		obj.KubernetesVersion = DefaultKubernetesVersion
 	}
@@ -108,29 +133,7 @@ func (obj *ClusterConfiguration) Default() error {
 	SetDefaultsDNS(obj)
 	SetDefaultsEtcd(obj)
 	SetDefaultsAPIServer(&obj.APIServer)
-
-	return nil
 }
-
-// Default ...
-func (*ClusterStatus) Default() error {
-	return nil
-}
-
-// Default ...
-func (obj *JoinConfiguration) Default() error {
-	if obj.CACertPath == "" {
-		obj.CACertPath = DefaultCACertPath
-	}
-
-	SetDefaultsJoinControlPlane(obj.ControlPlane)
-	SetDefaultsDiscovery(&obj.Discovery)
-	SetDefaultsNodeRegistrationOptions(&obj.NodeRegistration) // FORK
-
-	return nil
-}
-
-// ------------------------------
 
 // SetDefaultsAPIServer assigns default values for the API Server
 func SetDefaultsAPIServer(obj *APIServer) {
@@ -160,7 +163,16 @@ func SetDefaultsEtcd(obj *ClusterConfiguration) {
 	}
 }
 
-// SetDefaultsJoinControlPlane ...
+// SetDefaultsJoinConfiguration assigns default values to a regular node
+func SetDefaultsJoinConfiguration(obj *JoinConfiguration) {
+	if obj.CACertPath == "" {
+		obj.CACertPath = DefaultCACertPath
+	}
+
+	SetDefaultsJoinControlPlane(obj.ControlPlane)
+	SetDefaultsDiscovery(&obj.Discovery)
+}
+
 func SetDefaultsJoinControlPlane(obj *JoinControlPlane) {
 	if obj != nil {
 		SetDefaultsAPIEndpoint(&obj.LocalAPIEndpoint)
@@ -231,13 +243,5 @@ func SetDefaultsBootstrapToken(bt *BootstrapToken) {
 func SetDefaultsAPIEndpoint(obj *APIEndpoint) {
 	if obj.BindPort == 0 {
 		obj.BindPort = DefaultAPIBindPort
-		obj.AdvertiseAddress = "0.0.0.0" // FORK
 	}
-}
-
-// SetDefaultsNodeRegistrationOptions sets the defaults for a NodeRegistrationOptions
-// FORK: do we want to default to dummy values?
-func SetDefaultsNodeRegistrationOptions(obj *NodeRegistrationOptions) {
-	obj.Name = "node"
-	obj.CRISocket = DefaultURLScheme + "://unknown"
 }
