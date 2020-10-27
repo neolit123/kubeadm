@@ -17,34 +17,35 @@ limitations under the License.
 package scheme
 
 import (
+	"k8s.io/kubeadm/api/kubeadm"
 	"k8s.io/kubeadm/api/kubeadm/v1beta1"
 	"k8s.io/kubeadm/api/kubeadm/v1beta2"
 	"k8s.io/kubeadm/api/pkg"
 )
 
-const (
-	// Group ...
-	Group = "kubeadm.k8s.io"
-)
-
-// VersionKinds ...
-var VersionKinds = []pkg.VersionKinds{
-	{
-		Version: v1beta1.Version,
-		Kinds: []pkg.Kind{
-			&v1beta1.InitConfiguration{},
-			&v1beta1.ClusterConfiguration{},
-			&v1beta1.ClusterStatus{},
-			&v1beta1.JoinConfiguration{},
-		},
-	},
-	{
-		Version: v1beta2.Version,
-		Kinds: []pkg.Kind{
-			&v1beta2.InitConfiguration{},
-			&v1beta2.ClusterConfiguration{},
-			&v1beta2.ClusterStatus{},
-			&v1beta2.JoinConfiguration{},
+// Groups ...
+var Groups = []pkg.Group{
+	pkg.Group{
+		Name: kubeadm.GroupKubeadm,
+		Versions: []pkg.VersionKinds{
+			{
+				Version: v1beta1.Version,
+				Kinds: []pkg.Kind{
+					&v1beta1.InitConfiguration{},
+					&v1beta1.ClusterConfiguration{},
+					&v1beta1.ClusterStatus{},
+					&v1beta1.JoinConfiguration{},
+				},
+			},
+			{
+				Version: v1beta2.Version,
+				Kinds: []pkg.Kind{
+					&v1beta2.InitConfiguration{},
+					&v1beta2.ClusterConfiguration{},
+					&v1beta2.ClusterStatus{},
+					&v1beta2.JoinConfiguration{},
+				},
+			},
 		},
 	},
 }

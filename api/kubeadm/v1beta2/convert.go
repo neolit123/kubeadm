@@ -46,7 +46,7 @@ func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind,
 
 // ConvertUpName ...
 func (*InitConfiguration) ConvertUpName() string {
-	return (*v1beta1.InitConfiguration)(nil).Name()
+	return (*v1beta1.InitConfiguration)(nil).GetDefaultTypeMeta().Kind
 }
 
 // -------
@@ -67,7 +67,7 @@ func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Ki
 
 // ConvertUpName ...
 func (*ClusterConfiguration) ConvertUpName() string {
-	return (*v1beta1.ClusterConfiguration)(nil).Name()
+	return (*v1beta1.ClusterConfiguration)(nil).GetDefaultTypeMeta().Kind
 }
 
 // -------
@@ -84,7 +84,7 @@ func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, err
 
 // ConvertUpName ...
 func (*ClusterStatus) ConvertUpName() string {
-	return (*v1beta1.ClusterStatus)(nil).Name()
+	return (*v1beta1.ClusterStatus)(nil).GetDefaultTypeMeta().Kind
 }
 
 // -------
@@ -113,5 +113,5 @@ func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind,
 
 // ConvertUpName ...
 func (*JoinConfiguration) ConvertUpName() string {
-	return (*v1beta1.JoinConfiguration)(nil).Name()
+	return (*v1beta1.JoinConfiguration)(nil).GetDefaultTypeMeta().Kind
 }

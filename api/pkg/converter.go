@@ -19,10 +19,8 @@ package pkg
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"reflect"
-	"strings"
 
 	"github.com/pkg/errors"
 
@@ -32,36 +30,29 @@ import (
 
 // Converter ...
 type Converter struct {
-	group         string
-	versionKinds  []VersionKinds
+	groups        []Group
 	cache         map[string]Kind
 	unmarshalFunc func([]byte, interface{}) error
 	marshalFunc   func(interface{}) ([]byte, error)
 }
 
 // NewConverter ...
-func NewConverter(group string, versionKinds []VersionKinds) *Converter {
+func NewConverter(groups []Group) *Converter {
 	return &Converter{
-		group:        group,
-		versionKinds: versionKinds,
-		cache:        map[string]Kind{},
+		groups: groups,
+		cache:  map[string]Kind{},
 	}
-}
-
-// GetGroup ...
-func (cv *Converter) GetGroup() string {
-	return cv.group
 }
 
 // AddToCache ...
 func (cv *Converter) AddToCache(kind Kind) {
-	key := fmt.Sprintf("%s.%s", kind.Version(), kind.Name())
+	key := kind.GetTypeMeta().String()
 	cv.cache[key] = cv.DeepCopy(nil, kind)
 }
 
 // GetFromCache ...
 func (cv *Converter) GetFromCache(kind Kind) Kind {
-	key := fmt.Sprintf("%s.%s", kind.Version(), kind.Name())
+	key := kind.GetTypeMeta().String()
 	cached, ok := cv.cache[key]
 	if !ok {
 		return nil
@@ -93,22 +84,23 @@ func (cv *Converter) GetObjectFromBytes(typemeta *metav1.TypeMeta, input []byte)
 
 // GetObject ...
 func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
-	gv := strings.Split(typemeta.APIVersion, "/")
-	if len(gv) != 2 {
-		return nil, errors.Errorf("malformed group/version: %s", typemeta.APIVersion)
-	}
-
-	for _, vk := range cv.versionKinds {
-		if gv[1] != vk.Version {
+	gvk := typemeta.GroupVersionKind()
+	for _, g := range cv.groups {
+		if g.Name != gvk.Group {
 			continue
 		}
-		for _, k := range vk.Kinds {
-			if typemeta.Kind != k.Name() {
+		for _, vk := range g.Versions {
+			if gvk.Version != vk.Version {
 				continue
 			}
-			new := cv.NewObject(k)
-			cv.SetTypeMeta(new)
-			return new, nil
+			for _, k := range vk.Kinds {
+				if gvk.Kind != k.GetDefaultTypeMeta().Kind {
+					continue
+				}
+				new := cv.NewObject(k)
+				cv.SetGetDefaultTypeMeta(new)
+				return new, nil
+			}
 		}
 	}
 	return nil, errors.Errorf("no object for: %+v", typemeta)
@@ -135,22 +127,26 @@ func (cv *Converter) DeepCopy(dst Kind, src Kind) Kind {
 	if err := cv.Unmarshal(bytes, dst); err != nil {
 		panic("error unmarshal: " + err.Error())
 	}
-	cv.SetTypeMeta(dst)
+	cv.SetGetDefaultTypeMeta(dst)
 	return dst
 }
 
 // ConvertTo ...
-func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
-	if len(cv.versionKinds) == 0 {
-		return nil, errors.New("no versions to convert to in scheme")
+func (cv *Converter) ConvertTo(in Kind, group, targetVersion string) (Kind, error) {
+	g, err := cv.getGroup(group)
+	if err != nil {
+		return nil, err
 	}
-	version := in.Version()
-	kindName := in.Name()
+	versionKinds := g.Versions
+
+	tm := in.GetTypeMeta()
+	version := tm.GroupVersionKind().Version
+	kindName := tm.Kind
 
 	// get the current version index
 	versionIdx := -1
-	for i := 0; i < len(cv.versionKinds); i++ {
-		vk := cv.versionKinds[i]
+	for i := 0; i < len(versionKinds); i++ {
+		vk := versionKinds[i]
 		if version == vk.Version {
 			versionIdx = i
 			break
@@ -162,7 +158,7 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 
 	// get the target version index
 	targetVersionIdx := -1
-	for i, vk := range cv.versionKinds {
+	for i, vk := range versionKinds {
 		if targetVersion == vk.Version {
 			targetVersionIdx = i
 			break
@@ -178,7 +174,6 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	}
 
 	var out = in
-	var err error
 	if versionIdx < targetVersionIdx {
 		goto convertUp
 	}
@@ -186,13 +181,13 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	// To convert down, iterate from the current version until the target version
 	// is reached (not including).
 	for i := versionIdx; i > targetVersionIdx; i-- {
-		vk := cv.versionKinds[i]
+		vk := versionKinds[i]
 		for _, k := range vk.Kinds {
-			if k.Name() == kindName {
+			if k.GetDefaultTypeMeta().Kind == kindName {
 				out, err = k.ConvertDown(cv, in)
 				if err != nil {
-					return nil, errors.Wrapf(err, "cannot convert %s/%s to %s/%s",
-						in.Version(), in.Name(), vk.Version, k.Name())
+					return nil, errors.Wrapf(err, "cannot convert %s to %s",
+						in.GetTypeMeta(), k.GetDefaultTypeMeta())
 				}
 				in = out
 				kindName = k.ConvertUpName()
@@ -205,41 +200,58 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	// until the target version is reached (including).
 convertUp:
 	for i := versionIdx + 1; i < targetVersionIdx+1; i++ {
-		vk := cv.versionKinds[i]
+		vk := versionKinds[i]
 		for _, k := range vk.Kinds {
 			if k.ConvertUpName() == kindName {
 				out, err = k.ConvertUp(cv, in)
 				if err != nil {
-					return nil, errors.Wrapf(err, "cannot convert %s/%s to %s/%s",
-						in.Version(), in.Name(), vk.Version, k.Name())
+					return nil, errors.Wrapf(err, "cannot convert %s to %s",
+						in.GetTypeMeta(), k.GetDefaultTypeMeta())
 				}
 				in = out
-				kindName = k.Name()
+				kindName = k.GetDefaultTypeMeta().Kind
 			}
 		}
 	}
 	return out, nil
 }
 
-// ConvertToLatest ...
-func (cv *Converter) ConvertToLatest(in Kind) (Kind, error) {
-	if len(cv.versionKinds) == 0 {
-		return nil, errors.New("no versions to convert to in scheme")
+// getGroup ...
+func (cv *Converter) getGroup(name string) (*Group, error) {
+	if len(cv.groups) == 0 {
+		return nil, errors.New("no groups defined")
 	}
-	latest := cv.versionKinds[len(cv.versionKinds)-1]
-	return cv.ConvertTo(in, latest.Version)
+	for i := range cv.groups {
+		g := cv.groups[i]
+		if name == g.Name {
+			return &g, nil
+		}
+	}
+	return nil, errors.Errorf("unknown group %q", name)
+}
+
+// ConvertToLatest ...
+func (cv *Converter) ConvertToLatest(in Kind, group string) (Kind, error) {
+	g, err := cv.getGroup(group)
+	if err != nil {
+		return nil, err
+	}
+	latest := g.Versions[len(g.Versions)-1]
+	return cv.ConvertTo(in, group, latest.Version)
 }
 
 // ConvertToOldest ...
-func (cv *Converter) ConvertToOldest(in Kind) (Kind, error) {
-	if len(cv.versionKinds) == 0 {
-		return nil, errors.New("no versions to convert to in scheme")
+func (cv *Converter) ConvertToOldest(in Kind, group string) (Kind, error) {
+	g, err := cv.getGroup(group)
+	if err != nil {
+		return nil, err
 	}
-	return cv.ConvertTo(in, cv.versionKinds[0].Version)
+	oldest := g.Versions[0]
+	return cv.ConvertTo(in, group, oldest.Version)
 }
 
-// GetTypeMetaFromBytes ...
-func (cv *Converter) GetTypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error) {
+// TypeMetaFromBytes ...
+func (cv *Converter) TypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error) {
 	typemeta := &metav1.TypeMeta{}
 	if cv.unmarshalFunc == nil {
 		return nil, errors.New("unmarshal function not set")
@@ -250,11 +262,10 @@ func (cv *Converter) GetTypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error
 	return typemeta, nil
 }
 
-// SetTypeMeta ...
-func (cv *Converter) SetTypeMeta(kind Kind) {
+// SetGetDefaultTypeMeta ...
+func (cv *Converter) SetGetDefaultTypeMeta(kind Kind) {
 	typemeta := kind.GetTypeMeta()
-	typemeta.APIVersion = cv.group + "/" + kind.Version()
-	typemeta.Kind = kind.Name()
+	*typemeta = *kind.GetDefaultTypeMeta()
 }
 
 // SetMarshalFunc ...

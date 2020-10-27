@@ -23,12 +23,6 @@ import (
 // Kind respresents an interface that all API objects that support validation, defaulting
 // and conversion in a version package must implement.
 type Kind interface {
-	// Version must define the version of this Kind from the version package its defined in -
-	// e.g. Kind Foo in package v1beta1 must return "v1beta1" here.
-	Version() string
-	// Name must be the Kind name as string. Kind Foo defined in package v1beta1
-	// should return "Foo" here. Names must be unique for API objects in a version package.
-	Name() string
 	// ConvertUp must take and older versioned Kind as input and covert it to a
 	// Kind of the current version. Older version packages must not import newer ones.
 	// Newer version packages must only import the prior version.
@@ -42,13 +36,20 @@ type Kind interface {
 	Validate() error
 	// Default must define the defaulting function for this Kind.
 	Default() error
-	// GetTypeMeta must return a pointer to the TypeMeta structure for this API object.
-	// Returning nil here would trip the converter logic.
+	// TypeMeta ...
 	GetTypeMeta() *metav1.TypeMeta
+	// GetDefaultTypeMeta ...
+	GetDefaultTypeMeta() *metav1.TypeMeta
 }
 
 // VersionKinds can be used to map Kinds to a version.
 type VersionKinds struct {
 	Version string
 	Kinds   []Kind
+}
+
+// Group ...
+type Group struct {
+	Name     string
+	Versions []VersionKinds
 }

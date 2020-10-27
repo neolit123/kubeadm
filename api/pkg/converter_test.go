@@ -30,7 +30,7 @@ func TestSplitDocuments(t *testing.T) {
 	bar := `{ "bar": "Bar" }`
 	multiDoc := foo + "\n---\n" + bar
 
-	cv := NewConverter("testgroup", nil)
+	cv := NewConverter(nil)
 	docs, err := cv.SplitDocuments([]byte(multiDoc))
 	if err != nil {
 		t.Fatalf("document split error: %v", err)
@@ -49,18 +49,25 @@ func TestSplitDocuments(t *testing.T) {
 	}
 }
 
+const testGroup = "testgroup"
+
 func TestConvert(t *testing.T) {
-	versionKinds := []VersionKinds{
-		{"v1beta1", []Kind{&testFoo{}}},
-		{"v1beta2", []Kind{&testBar{}}},
-		{"v1beta3", []Kind{&testZed{}}},
+	g := []Group{
+		{
+			Name: testGroup,
+			Versions: []VersionKinds{
+				{"v1beta1", []Kind{&testFoo{}}},
+				{"v1beta2", []Kind{&testBar{}}},
+				{"v1beta3", []Kind{&testZed{}}},
+			},
+		},
 	}
-	cv := NewConverter("testgroup", versionKinds)
+	cv := NewConverter(g)
 	cv.SetMarshalFunc(json.Marshal)
 	cv.SetUnmarshalFunc(json.Unmarshal)
 
 	testZedJSON := []byte(`{"kind": "testZed", "apiVersion": "testgroup/v1beta3", "a": "A", "b": "B", "c": "C"}`)
-	typemeta, err := cv.GetTypeMetaFromBytes(testZedJSON)
+	typemeta, err := cv.TypeMetaFromBytes(testZedJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,22 +76,22 @@ func TestConvert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	obj, err := cv.ConvertToOldest(objOriginal)
+	obj, err := cv.ConvertToOldest(objOriginal, testGroup)
 	if err != nil {
 		t.Fatalf("failed converting to oldest: %v", err)
 	}
 	expectedFoo := &testFoo{A: "A"}
-	cv.SetTypeMeta(Kind(expectedFoo))
+	cv.SetGetDefaultTypeMeta(Kind(expectedFoo))
 	if !reflect.DeepEqual(obj, expectedFoo) {
-		t.Fatalf("exected oldest:\n%#v\ngot:\n%#v", expectedFoo, obj)
+		t.Fatalf("expected oldest:\n%#v\ngot:\n%#v", expectedFoo, obj)
 	}
 
-	obj, err = cv.ConvertToLatest(obj)
+	obj, err = cv.ConvertToLatest(obj, testGroup)
 	if err != nil {
 		t.Fatalf("failed converting to latest: %v", err)
 	}
 	if !reflect.DeepEqual(obj, objOriginal) {
-		t.Fatalf("exected roundtrip to latest:\n%#v\ngot:\n%#v", expectedFoo, obj)
+		t.Fatalf("expected roundtrip to latest:\n%#v\ngot:\n%#v", expectedFoo, obj)
 	}
 }
 
@@ -94,14 +101,15 @@ type testFoo struct {
 	A               string `json:"a"`
 }
 
-func (*testFoo) Version() string                                  { return "v1beta1" }
-func (*testFoo) Name() string                                     { return "" }
 func (*testFoo) ConvertUp(cv *Converter, in Kind) (Kind, error)   { return nil, nil }
 func (*testFoo) ConvertDown(cv *Converter, in Kind) (Kind, error) { return nil, nil }
 func (*testFoo) ConvertUpName() string                            { return "" }
 func (*testFoo) Validate() error                                  { return nil }
 func (*testFoo) Default() error                                   { return nil }
 func (x *testFoo) GetTypeMeta() *metav1.TypeMeta                  { return &x.TypeMeta }
+func (*testFoo) GetDefaultTypeMeta() *metav1.TypeMeta {
+	return &metav1.TypeMeta{APIVersion: testGroup + "/v1beta1", Kind: "testFoo"}
+}
 
 // testBar
 type testBar struct {
@@ -110,8 +118,6 @@ type testBar struct {
 	B               string `json:"b"`
 }
 
-func (*testBar) Version() string { return "v1beta2" }
-func (*testBar) Name() string    { return "testBar" }
 func (*testBar) ConvertUp(cv *Converter, in Kind) (Kind, error) {
 	new := &testBar{}
 	cv.DeepCopy(new, in)
@@ -128,10 +134,13 @@ func (*testBar) ConvertDown(cv *Converter, in Kind) (Kind, error) {
 	cv.DeepCopy(new, in)
 	return new, nil
 }
-func (*testBar) ConvertUpName() string           { return (*testFoo)(nil).Name() }
+func (*testBar) ConvertUpName() string           { return (*testFoo)(nil).GetDefaultTypeMeta().Kind }
 func (*testBar) Validate() error                 { return nil }
 func (*testBar) Default() error                  { return nil }
 func (x *testBar) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
+func (*testBar) GetDefaultTypeMeta() *metav1.TypeMeta {
+	return &metav1.TypeMeta{APIVersion: testGroup + "/v1beta2", Kind: "testBar"}
+}
 
 // testZed
 type testZed struct {
@@ -141,8 +150,6 @@ type testZed struct {
 	C               string `json:"c"`
 }
 
-func (*testZed) Version() string { return "v1beta3" }
-func (*testZed) Name() string    { return "testZed" }
 func (*testZed) ConvertUp(cv *Converter, in Kind) (Kind, error) {
 	new := &testZed{}
 	cv.DeepCopy(new, in)
@@ -159,7 +166,10 @@ func (*testZed) ConvertDown(cv *Converter, in Kind) (Kind, error) {
 	cv.DeepCopy(new, in)
 	return new, nil
 }
-func (*testZed) ConvertUpName() string           { return (*testBar)(nil).Name() }
+func (*testZed) ConvertUpName() string           { return (*testBar)(nil).GetDefaultTypeMeta().Kind }
 func (*testZed) Validate() error                 { return nil }
 func (*testZed) Default() error                  { return nil }
 func (x *testZed) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
+func (*testZed) GetDefaultTypeMeta() *metav1.TypeMeta {
+	return &metav1.TypeMeta{APIVersion: testGroup + "/v1beta3", Kind: "testZed"}
+}

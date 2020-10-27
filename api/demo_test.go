@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"k8s.io/kubeadm/api/kubeadm"
 	"k8s.io/kubeadm/api/kubeadm/scheme"
 	"k8s.io/kubeadm/api/kubeadm/v1beta2"
 	"k8s.io/kubeadm/api/pkg"
@@ -77,7 +78,7 @@ var input = []byte(`
 `)
 
 func TestDemo(t *testing.T) {
-	cv := pkg.NewConverter(scheme.Group, scheme.VersionKinds)
+	cv := pkg.NewConverter(scheme.Groups)
 	cv.SetUnmarshalFunc(json.Unmarshal)
 	cv.SetMarshalFunc(json.Marshal)
 
@@ -89,7 +90,7 @@ func TestDemo(t *testing.T) {
 
 	for _, doc := range docs {
 
-		typemeta, err := cv.GetTypeMetaFromBytes(doc)
+		typemeta, err := cv.TypeMetaFromBytes(doc)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -111,7 +112,7 @@ func TestDemo(t *testing.T) {
 			t.Fatal("marshal", err)
 		}
 
-		obj, err = cv.ConvertTo(obj, "v1beta1")
+		obj, err = cv.ConvertTo(obj, kubeadm.GroupKubeadm, "v1beta1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -123,7 +124,7 @@ func TestDemo(t *testing.T) {
 		}
 		t.Logf("\n3-------- %s\n", data)
 
-		obj, err = cv.ConvertTo(obj, "v1beta2")
+		obj, err = cv.ConvertTo(obj, kubeadm.GroupKubeadm, "v1beta2")
 		if err != nil {
 			t.Fatal(err)
 		}
