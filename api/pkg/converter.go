@@ -82,11 +82,12 @@ func (cv *Converter) GetObjectFromBytes(typemeta *metav1.TypeMeta, input []byte)
 	if err != nil {
 		return nil, err
 	}
-
+	if cv.unmarshalFunc == nil {
+		return nil, errors.New("unmarshal function not set")
+	}
 	if err := cv.unmarshalFunc(input, kind); err != nil {
 		return nil, err
 	}
-
 	return kind, nil
 }
 
@@ -182,7 +183,8 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 		goto convertUp
 	}
 
-	// To convert down, iterate from the current version until the target version is reached.
+	// To convert down, iterate from the current version until the target version
+	// is reached (not including).
 	for i := versionIdx; i > targetVersionIdx; i-- {
 		vk := cv.versionKinds[i]
 		for _, k := range vk.Kinds {
@@ -199,8 +201,8 @@ func (cv *Converter) ConvertTo(in Kind, targetVersion string) (Kind, error) {
 	}
 	return out, nil
 
-	// To convert up, iterate from the current version index + 1 (next version) until the target
-	// version is reached (including).
+	// To convert up, iterate from the current version index + 1 (next version)
+	// until the target version is reached (including).
 convertUp:
 	for i := versionIdx + 1; i < targetVersionIdx+1; i++ {
 		vk := cv.versionKinds[i]
@@ -226,6 +228,14 @@ func (cv *Converter) ConvertToLatest(in Kind) (Kind, error) {
 	}
 	latest := cv.versionKinds[len(cv.versionKinds)-1]
 	return cv.ConvertTo(in, latest.Version)
+}
+
+// ConvertToOldest ...
+func (cv *Converter) ConvertToOldest(in Kind) (Kind, error) {
+	if len(cv.versionKinds) == 0 {
+		return nil, errors.New("no versions to convert to in scheme")
+	}
+	return cv.ConvertTo(in, cv.versionKinds[0].Version)
 }
 
 // GetTypeMetaFromBytes ...
@@ -283,7 +293,7 @@ func (cv *Converter) SplitDocuments(b []byte) ([][]byte, error) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not split documents")
 		}
 		if len(doc) == 0 {
 			continue
