@@ -95,7 +95,7 @@ type testFoo struct {
 }
 
 func (*testFoo) Version() string                                  { return "v1beta1" }
-func (*testFoo) Name() string                                     { return "testFoo" }
+func (*testFoo) Name() string                                     { return "" }
 func (*testFoo) ConvertUp(cv *Converter, in Kind) (Kind, error)   { return nil, nil }
 func (*testFoo) ConvertDown(cv *Converter, in Kind) (Kind, error) { return nil, nil }
 func (*testFoo) ConvertUpName() string                            { return "" }
@@ -128,7 +128,7 @@ func (*testBar) ConvertDown(cv *Converter, in Kind) (Kind, error) {
 	cv.DeepCopy(new, in)
 	return new, nil
 }
-func (*testBar) ConvertUpName() string           { return (&testFoo{}).Name() }
+func (*testBar) ConvertUpName() string           { return (*testFoo)(nil).Name() }
 func (*testBar) Validate() error                 { return nil }
 func (*testBar) Default() error                  { return nil }
 func (x *testBar) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
@@ -159,7 +159,7 @@ func (*testZed) ConvertDown(cv *Converter, in Kind) (Kind, error) {
 	cv.DeepCopy(new, in)
 	return new, nil
 }
-func (*testZed) ConvertUpName() string           { return (&testBar{}).Name() }
+func (*testZed) ConvertUpName() string           { return (*testBar)(nil).Name() }
 func (*testZed) Validate() error                 { return nil }
 func (*testZed) Default() error                  { return nil }
 func (x *testZed) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
