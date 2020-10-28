@@ -17,15 +17,11 @@ limitations under the License.
 package pkg
 
 import (
-	"bufio"
-	"bytes"
-	"io"
 	"reflect"
 
 	"github.com/pkg/errors"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 // NewConverter ...
@@ -340,26 +336,6 @@ func (cv *Converter) Unmarshal(b []byte, k Kind) error {
 		return errors.New("unmarshal function not set")
 	}
 	return cv.unmarshalFunc(b, k)
-}
-
-// SplitDocuments ...
-func (cv *Converter) SplitDocuments(b []byte) ([][]byte, error) {
-	docs := [][]byte{}
-	buf := bytes.NewBuffer(b)
-	reader := utilyaml.NewYAMLReader(bufio.NewReader(buf))
-	for {
-		doc, err := reader.Read()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, errors.Wrap(err, "could not split documents")
-		}
-		if len(doc) == 0 {
-			continue
-		}
-		docs = append(docs, doc)
-	}
-	return docs, nil
 }
 
 // String ...

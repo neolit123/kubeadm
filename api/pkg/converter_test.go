@@ -80,8 +80,7 @@ func TestSplitDocuments(t *testing.T) {
 	bar := `{ "bar": "Bar" }`
 	multiDoc := foo + "\n---\n" + bar
 
-	cv := (*Converter)(nil)
-	docs, err := cv.SplitDocuments([]byte(multiDoc))
+	docs, err := SplitDocuments([]byte(multiDoc))
 	if err != nil {
 		t.Fatalf("document split error: %v", err)
 	}
