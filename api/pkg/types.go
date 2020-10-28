@@ -26,12 +26,14 @@ type Kind interface {
 	// ConvertUp must take and older versioned Kind as input and covert it to a
 	// Kind of the current version. Older version packages must not import newer ones.
 	// Newer version packages must only import the prior version.
-	ConvertUp(*Converter, Kind) (Kind, error)
+	ConvertUp(*Converter, *ConvertSpec) (*ConvertSpec, error)
 	// ConvertDown must take the current version Kind as input and down-convert it
 	// to a prior version Kind.
-	ConvertDown(*Converter, Kind) (Kind, error)
-	// ConvertUpName must return the Kind.Name() of this object in the prior version.
-	ConvertUpName() string
+	ConvertDown(*Converter, *ConvertSpec) (*ConvertSpec, error)
+	// ConvertUpSpec ...
+	ConvertUpSpec() *ConvertSpec
+	// ConvertDownSpec ...
+	ConvertDownSpec() *ConvertSpec
 	// Validate must define the validation function for this Kind.
 	Validate() error
 	// Default must define the defaulting function for this Kind.
@@ -52,4 +54,17 @@ type VersionKinds struct {
 type Group struct {
 	Name     string
 	Versions []VersionKinds
+}
+
+// Converter ...
+type Converter struct {
+	groups        []Group
+	cache         map[string]Kind
+	unmarshalFunc func([]byte, interface{}) error
+	marshalFunc   func(interface{}) ([]byte, error)
+}
+
+// ConvertSpec ...
+type ConvertSpec struct {
+	Kinds []Kind
 }

@@ -25,12 +25,62 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const testGroup = "testgroup"
+
+func TestValidateGroups(t *testing.T) {
+	testCases := []struct {
+		name          string
+		groups        []Group
+		expectedError bool
+	}{
+		{
+			name:          "valid: passes validation",
+			expectedError: false,
+			groups:        []Group{Group{Name: testGroup, Versions: []VersionKinds{{Version: "v1beta1", Kinds: []Kind{&testFoo{}}}}}},
+		},
+		{
+			name:          "invalid: unknown group",
+			expectedError: true,
+			groups:        []Group{Group{Name: "foo", Versions: []VersionKinds{{Version: "v1beta1", Kinds: []Kind{&testFoo{}}}}}},
+		},
+		{
+			name:          "invalid: unknown version",
+			expectedError: true,
+			groups:        []Group{Group{Name: testGroup, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{&testFoo{}}}}}},
+		},
+		{
+			name:          "invalid: empty groups",
+			expectedError: true,
+			groups:        []Group{},
+		},
+		{
+			name:          "invalid: empty group name",
+			expectedError: true,
+			groups:        []Group{Group{Name: "", Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{&testFoo{}}}}}},
+		},
+		{
+			name:          "invalid: empty version name",
+			expectedError: true,
+			groups:        []Group{Group{Name: testGroup, Versions: []VersionKinds{{Version: "", Kinds: []Kind{&testFoo{}}}}}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := NewConverter(tc.groups)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
+			}
+		})
+	}
+}
+
 func TestSplitDocuments(t *testing.T) {
 	foo := `{ "foo": "Foo" }`
 	bar := `{ "bar": "Bar" }`
 	multiDoc := foo + "\n---\n" + bar
 
-	cv := NewConverter(nil)
+	cv := (*Converter)(nil)
 	docs, err := cv.SplitDocuments([]byte(multiDoc))
 	if err != nil {
 		t.Fatalf("document split error: %v", err)
@@ -49,8 +99,6 @@ func TestSplitDocuments(t *testing.T) {
 	}
 }
 
-const testGroup = "testgroup"
-
 func TestConvert(t *testing.T) {
 	g := []Group{
 		{
@@ -62,7 +110,7 @@ func TestConvert(t *testing.T) {
 			},
 		},
 	}
-	cv := NewConverter(g)
+	cv, _ := NewConverter(g)
 	cv.SetMarshalFunc(json.Marshal)
 	cv.SetUnmarshalFunc(json.Unmarshal)
 
@@ -76,22 +124,24 @@ func TestConvert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	obj, err := cv.ConvertToOldest(objOriginal, testGroup)
+	cs := &ConvertSpec{Kinds: []Kind{objOriginal}}
+	cs, err = cv.ConvertToOldest(cs, testGroup)
 	if err != nil {
 		t.Fatalf("failed converting to oldest: %v", err)
 	}
+
 	expectedFoo := &testFoo{A: "A"}
 	cv.SetGetDefaultTypeMeta(Kind(expectedFoo))
-	if !reflect.DeepEqual(obj, expectedFoo) {
-		t.Fatalf("expected oldest:\n%#v\ngot:\n%#v", expectedFoo, obj)
+	if !reflect.DeepEqual(cs.Kinds[0], expectedFoo) {
+		t.Fatalf("expected oldest:\n%#v\ngot:\n%#v", expectedFoo, cs.Kinds[0])
 	}
 
-	obj, err = cv.ConvertToLatest(obj, testGroup)
+	cs, err = cv.ConvertToLatest(cs, testGroup)
 	if err != nil {
 		t.Fatalf("failed converting to latest: %v", err)
 	}
-	if !reflect.DeepEqual(obj, objOriginal) {
-		t.Fatalf("expected roundtrip to latest:\n%#v\ngot:\n%#v", expectedFoo, obj)
+	if !reflect.DeepEqual(cs.Kinds[0], objOriginal) {
+		t.Fatalf("expected roundtrip to latest:\n%#v\ngot:\n%#v", expectedFoo, cs.Kinds[0])
 	}
 }
 
@@ -101,12 +151,13 @@ type testFoo struct {
 	A               string `json:"a"`
 }
 
-func (*testFoo) ConvertUp(cv *Converter, in Kind) (Kind, error)   { return nil, nil }
-func (*testFoo) ConvertDown(cv *Converter, in Kind) (Kind, error) { return nil, nil }
-func (*testFoo) ConvertUpName() string                            { return "" }
-func (*testFoo) Validate() error                                  { return nil }
-func (*testFoo) Default() error                                   { return nil }
-func (x *testFoo) GetTypeMeta() *metav1.TypeMeta                  { return &x.TypeMeta }
+func (*testFoo) ConvertUp(cv *Converter, in *ConvertSpec) (*ConvertSpec, error)   { return nil, nil }
+func (*testFoo) ConvertDown(cv *Converter, in *ConvertSpec) (*ConvertSpec, error) { return nil, nil }
+func (*testFoo) ConvertUpSpec() *ConvertSpec                                      { return &ConvertSpec{} }
+func (*testFoo) ConvertDownSpec() *ConvertSpec                                    { return &ConvertSpec{Kinds: []Kind{&testFoo{}}} }
+func (*testFoo) Validate() error                                                  { return nil }
+func (*testFoo) Default() error                                                   { return nil }
+func (x *testFoo) GetTypeMeta() *metav1.TypeMeta                                  { return &x.TypeMeta }
 func (*testFoo) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: testGroup + "/v1beta1", Kind: "testFoo"}
 }
@@ -118,23 +169,26 @@ type testBar struct {
 	B               string `json:"b"`
 }
 
-func (*testBar) ConvertUp(cv *Converter, in Kind) (Kind, error) {
+func (*testBar) ConvertUp(cv *Converter, in *ConvertSpec) (*ConvertSpec, error) {
+	ink := in.Kinds[0]
 	new := &testBar{}
-	cv.DeepCopy(new, in)
+	cv.DeepCopy(new, ink)
 	cachedKind := cv.GetFromCache(new)
 	if cachedKind != nil {
 		cached := cachedKind.(*testBar)
 		new.B = cached.B
 	}
-	return new, nil
+	return &ConvertSpec{Kinds: []Kind{new}}, nil
 }
-func (*testBar) ConvertDown(cv *Converter, in Kind) (Kind, error) {
-	cv.AddToCache(in)
+func (*testBar) ConvertDown(cv *Converter, in *ConvertSpec) (*ConvertSpec, error) {
+	ink := in.Kinds[0]
+	cv.AddToCache(ink)
 	new := &testFoo{}
-	cv.DeepCopy(new, in)
-	return new, nil
+	cv.DeepCopy(new, ink)
+	return &ConvertSpec{Kinds: []Kind{new}}, nil
 }
-func (*testBar) ConvertUpName() string           { return (*testFoo)(nil).GetDefaultTypeMeta().Kind }
+func (*testBar) ConvertUpSpec() *ConvertSpec     { return &ConvertSpec{Kinds: []Kind{&testFoo{}}} }
+func (*testBar) ConvertDownSpec() *ConvertSpec   { return &ConvertSpec{Kinds: []Kind{&testBar{}}} }
 func (*testBar) Validate() error                 { return nil }
 func (*testBar) Default() error                  { return nil }
 func (x *testBar) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
@@ -150,23 +204,26 @@ type testZed struct {
 	C               string `json:"c"`
 }
 
-func (*testZed) ConvertUp(cv *Converter, in Kind) (Kind, error) {
+func (*testZed) ConvertUp(cv *Converter, in *ConvertSpec) (*ConvertSpec, error) {
+	ink := in.Kinds[0]
 	new := &testZed{}
-	cv.DeepCopy(new, in)
+	cv.DeepCopy(new, ink)
 	cachedKind := cv.GetFromCache(new)
 	if cachedKind != nil {
 		cached := cachedKind.(*testZed)
 		new.C = cached.C
 	}
-	return new, nil
+	return &ConvertSpec{Kinds: []Kind{new}}, nil
 }
-func (*testZed) ConvertDown(cv *Converter, in Kind) (Kind, error) {
-	cv.AddToCache(in)
+func (*testZed) ConvertDown(cv *Converter, in *ConvertSpec) (*ConvertSpec, error) {
+	ink := in.Kinds[0]
+	cv.AddToCache(ink)
 	new := &testBar{}
-	cv.DeepCopy(new, in)
-	return new, nil
+	cv.DeepCopy(new, ink)
+	return &ConvertSpec{Kinds: []Kind{new}}, nil
 }
-func (*testZed) ConvertUpName() string           { return (*testBar)(nil).GetDefaultTypeMeta().Kind }
+func (*testZed) ConvertUpSpec() *ConvertSpec     { return &ConvertSpec{Kinds: []Kind{&testBar{}}} }
+func (*testZed) ConvertDownSpec() *ConvertSpec   { return &ConvertSpec{Kinds: []Kind{&testZed{}}} }
 func (*testZed) Validate() error                 { return nil }
 func (*testZed) Default() error                  { return nil }
 func (x *testZed) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
