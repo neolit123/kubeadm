@@ -153,9 +153,29 @@ func (cv *Converter) DeepCopy(dst Kind, src Kind) Kind {
 	return dst
 }
 
+// getGroup ...
+func (cv *Converter) getGroup(name string) (*Group, error) {
+	if len(cv.groups) == 0 {
+		return nil, errors.New("no groups defined")
+	}
+	for i := range cv.groups {
+		g := cv.groups[i]
+		if name == g.Name {
+			return &g, nil
+		}
+	}
+	return nil, errors.Errorf("unknown group %q", name)
+}
+
 // ConvertTo ...
 // TODO: support accross groups is possible, but not implemented yet.
 func (cv *Converter) ConvertTo(in *ConvertSpec, group, targetVersion string) (*ConvertSpec, error) {
+	if in == nil {
+		return nil, errors.New("ConvertTo received a nil ConvertSpec")
+	}
+	if len(in.Kinds) == 0 {
+		return nil, errors.New("ConvertTo received an empty list of Kinds")
+	}
 	g, err := cv.getGroup(group)
 	if err != nil {
 		return nil, err
@@ -256,20 +276,6 @@ convertUp:
 		}
 	}
 	return out, nil
-}
-
-// getGroup ...
-func (cv *Converter) getGroup(name string) (*Group, error) {
-	if len(cv.groups) == 0 {
-		return nil, errors.New("no groups defined")
-	}
-	for i := range cv.groups {
-		g := cv.groups[i]
-		if name == g.Name {
-			return &g, nil
-		}
-	}
-	return nil, errors.Errorf("unknown group %q", name)
 }
 
 // ConvertToLatest ...
