@@ -110,7 +110,10 @@ func TestConvert(t *testing.T) {
 			},
 		},
 	}
-	cv, _ := NewConverter(g)
+	cv, err := NewConverter(g)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cv.SetMarshalFunc(json.Marshal)
 	cv.SetUnmarshalFunc(json.Unmarshal)
 
