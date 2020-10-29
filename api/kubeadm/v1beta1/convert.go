@@ -21,87 +21,87 @@ import (
 )
 
 // ConvertUp ...
-func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	return in, nil
 }
 
 // ConvertDown ...
-func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	return in, nil
 }
 
 // ConvertUpSpec ...
-func (*InitConfiguration) ConvertUpSpec() *pkg.ConvertSpec {
-	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&InitConfiguration{}}}
+func (*InitConfiguration) ConvertUpSpec() *pkg.KindSpec {
+	return &pkg.KindSpec{Kinds: []pkg.Kind{&InitConfiguration{}}}
 }
 
 // ConvertDownSpec ...
-func (*InitConfiguration) ConvertDownSpec() *pkg.ConvertSpec {
-	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&InitConfiguration{}}}
+func (*InitConfiguration) ConvertDownSpec() *pkg.KindSpec {
+	return &pkg.KindSpec{Kinds: []pkg.Kind{&InitConfiguration{}}}
 }
 
 // -------
 
 // ConvertUp ...
-func (*ClusterConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+func (*ClusterConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	return in, nil
 }
 
 // ConvertDown ...
-func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	return in, nil
 }
 
 // ConvertUpSpec ...
-func (*ClusterConfiguration) ConvertUpSpec() *pkg.ConvertSpec {
-	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&ClusterConfiguration{}}}
+func (*ClusterConfiguration) ConvertUpSpec() *pkg.KindSpec {
+	return &pkg.KindSpec{Kinds: []pkg.Kind{&ClusterConfiguration{}}}
 }
 
 // ConvertDownSpec ...
-func (*ClusterConfiguration) ConvertDownSpec() *pkg.ConvertSpec {
-	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&ClusterConfiguration{}}}
+func (*ClusterConfiguration) ConvertDownSpec() *pkg.KindSpec {
+	return &pkg.KindSpec{Kinds: []pkg.Kind{&ClusterConfiguration{}}}
 }
 
 // -------
 
 // ConvertUp ...
-func (*ClusterStatus) ConvertUp(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+func (*ClusterStatus) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	return in, nil
 }
 
 // ConvertDown ...
-func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	return in, nil
 }
 
 // ConvertUpSpec ...
-func (*ClusterStatus) ConvertUpSpec() *pkg.ConvertSpec {
-	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&ClusterStatus{}}}
+func (*ClusterStatus) ConvertUpSpec() *pkg.KindSpec {
+	return &pkg.KindSpec{Kinds: []pkg.Kind{&ClusterStatus{}}}
 }
 
 // ConvertDownSpec ...
-func (*ClusterStatus) ConvertDownSpec() *pkg.ConvertSpec {
-	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&ClusterStatus{}}}
+func (*ClusterStatus) ConvertDownSpec() *pkg.KindSpec {
+	return &pkg.KindSpec{Kinds: []pkg.Kind{&ClusterStatus{}}}
 }
 
 // -------
 
 // ConvertUp ...
-func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	return in, nil
 }
 
 // ConvertDown ...
-func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	return in, nil
 }
 
 // ConvertUpSpec ...
-func (*JoinConfiguration) ConvertUpSpec() *pkg.ConvertSpec {
-	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&JoinConfiguration{}}}
+func (*JoinConfiguration) ConvertUpSpec() *pkg.KindSpec {
+	return &pkg.KindSpec{Kinds: []pkg.Kind{&JoinConfiguration{}}}
 }
 
 // ConvertDownSpec ...
-func (*JoinConfiguration) ConvertDownSpec() *pkg.ConvertSpec {
-	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&JoinConfiguration{}}}
+func (*JoinConfiguration) ConvertDownSpec() *pkg.KindSpec {
+	return &pkg.KindSpec{Kinds: []pkg.Kind{&JoinConfiguration{}}}
 }

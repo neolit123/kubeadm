@@ -165,9 +165,9 @@ func (cv *Converter) getGroup(name string) (*Group, error) {
 
 // ConvertTo ...
 // TODO: support accross groups is possible, but not implemented yet.
-func (cv *Converter) ConvertTo(in *ConvertSpec, group, targetVersion string) (*ConvertSpec, error) {
+func (cv *Converter) ConvertTo(in *KindSpec, group, targetVersion string) (*KindSpec, error) {
 	if in == nil {
-		return nil, errors.New("ConvertTo received a nil ConvertSpec")
+		return nil, errors.New("ConvertTo received a nil KindSpec")
 	}
 	if len(in.Kinds) == 0 {
 		return nil, errors.New("ConvertTo received an empty list of Kinds")
@@ -275,7 +275,7 @@ convertUp:
 }
 
 // ConvertToLatest ...
-func (cv *Converter) ConvertToLatest(in *ConvertSpec, group string) (*ConvertSpec, error) {
+func (cv *Converter) ConvertToLatest(in *KindSpec, group string) (*KindSpec, error) {
 	g, err := cv.getGroup(group)
 	if err != nil {
 		return nil, err
@@ -285,7 +285,7 @@ func (cv *Converter) ConvertToLatest(in *ConvertSpec, group string) (*ConvertSpe
 }
 
 // ConvertToOldest ...
-func (cv *Converter) ConvertToOldest(in *ConvertSpec, group string) (*ConvertSpec, error) {
+func (cv *Converter) ConvertToOldest(in *KindSpec, group string) (*KindSpec, error) {
 	g, err := cv.getGroup(group)
 	if err != nil {
 		return nil, err
@@ -339,7 +339,7 @@ func (cv *Converter) Unmarshal(b []byte, k Kind) error {
 }
 
 // String ...
-func (s *ConvertSpec) String() string {
+func (s *KindSpec) String() string {
 	str := "ConverterSpec{ "
 	for _, k := range s.Kinds {
 		str += k.GetDefaultTypeMeta().String() + " "
@@ -349,6 +349,6 @@ func (s *ConvertSpec) String() string {
 }
 
 // Equals ...
-func (s *ConvertSpec) Equals(e *ConvertSpec) bool {
+func (s *KindSpec) Equals(e *KindSpec) bool {
 	return s.String() == e.String()
 }

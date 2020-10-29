@@ -26,14 +26,14 @@ type Kind interface {
 	// ConvertUp must take and older versioned Kind as input and covert it to a
 	// Kind of the current version. Older version packages must not import newer ones.
 	// Newer version packages must only import the prior version.
-	ConvertUp(*Converter, *ConvertSpec) (*ConvertSpec, error)
+	ConvertUp(*Converter, *KindSpec) (*KindSpec, error)
 	// ConvertDown must take the current version Kind as input and down-convert it
 	// to a prior version Kind.
-	ConvertDown(*Converter, *ConvertSpec) (*ConvertSpec, error)
+	ConvertDown(*Converter, *KindSpec) (*KindSpec, error)
 	// ConvertUpSpec ...
-	ConvertUpSpec() *ConvertSpec
+	ConvertUpSpec() *KindSpec
 	// ConvertDownSpec ...
-	ConvertDownSpec() *ConvertSpec
+	ConvertDownSpec() *KindSpec
 	// Validate must define the validation function for this Kind.
 	Validate() error
 	// Default must define the defaulting function for this Kind.
@@ -64,7 +64,7 @@ type Converter struct {
 	marshalFunc   func(interface{}) ([]byte, error)
 }
 
-// ConvertSpec ...
-type ConvertSpec struct {
+// KindSpec ...
+type KindSpec struct {
 	Kinds []Kind
 }
