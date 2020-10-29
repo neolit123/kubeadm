@@ -32,12 +32,12 @@ func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg
 
 // ConvertUpSpec ...
 func (*InitConfiguration) ConvertUpSpec() *pkg.KindSpec {
-	return &pkg.KindSpec{Kinds: []pkg.Kind{&InitConfiguration{}}}
+	return pkg.NewKindSpec().WithKinds(&InitConfiguration{})
 }
 
 // ConvertDownSpec ...
 func (*InitConfiguration) ConvertDownSpec() *pkg.KindSpec {
-	return &pkg.KindSpec{Kinds: []pkg.Kind{&InitConfiguration{}}}
+	return pkg.NewKindSpec().WithKinds(&InitConfiguration{})
 }
 
 // -------
@@ -54,12 +54,12 @@ func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*
 
 // ConvertUpSpec ...
 func (*ClusterConfiguration) ConvertUpSpec() *pkg.KindSpec {
-	return &pkg.KindSpec{Kinds: []pkg.Kind{&ClusterConfiguration{}}}
+	return pkg.NewKindSpec().WithKinds(&ClusterConfiguration{})
 }
 
 // ConvertDownSpec ...
 func (*ClusterConfiguration) ConvertDownSpec() *pkg.KindSpec {
-	return &pkg.KindSpec{Kinds: []pkg.Kind{&ClusterConfiguration{}}}
+	return pkg.NewKindSpec().WithKinds(&ClusterConfiguration{})
 }
 
 // -------
@@ -76,12 +76,12 @@ func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.Kin
 
 // ConvertUpSpec ...
 func (*ClusterStatus) ConvertUpSpec() *pkg.KindSpec {
-	return &pkg.KindSpec{Kinds: []pkg.Kind{&ClusterStatus{}}}
+	return pkg.NewKindSpec().WithKinds(&ClusterStatus{})
 }
 
 // ConvertDownSpec ...
 func (*ClusterStatus) ConvertDownSpec() *pkg.KindSpec {
-	return &pkg.KindSpec{Kinds: []pkg.Kind{&ClusterStatus{}}}
+	return pkg.NewKindSpec().WithKinds(&ClusterStatus{})
 }
 
 // -------
@@ -98,10 +98,10 @@ func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg
 
 // ConvertUpSpec ...
 func (*JoinConfiguration) ConvertUpSpec() *pkg.KindSpec {
-	return &pkg.KindSpec{Kinds: []pkg.Kind{&JoinConfiguration{}}}
+	return pkg.NewKindSpec().WithKinds(&JoinConfiguration{})
 }
 
 // ConvertDownSpec ...
 func (*JoinConfiguration) ConvertDownSpec() *pkg.KindSpec {
-	return &pkg.KindSpec{Kinds: []pkg.Kind{&JoinConfiguration{}}}
+	return pkg.NewKindSpec().WithKinds(&JoinConfiguration{})
 }

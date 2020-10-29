@@ -115,7 +115,7 @@ func TestDemo(t *testing.T) {
 			t.Fatal("marshal", err)
 		}
 
-		spec := &pkg.KindSpec{Kinds: []pkg.Kind{obj}}
+		spec := pkg.NewKindSpec().WithKinds(obj)
 		spec, err = cv.ConvertTo(spec, groups.GroupKubeadm, "v1beta1")
 		if err != nil {
 			t.Fatal(err)

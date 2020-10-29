@@ -183,7 +183,7 @@ func (cv *Converter) ConvertTo(in *KindSpec, group, targetVersion string) (*Kind
 	for i := 0; i < len(versionKinds); i++ {
 		vk := versionKinds[i]
 		for _, k := range vk.Kinds {
-			if in.Equals(k.ConvertDownSpec()) {
+			if in.EqualKinds(k.ConvertDownSpec()) {
 				versionIdx = i
 				goto break_loop
 			}
@@ -222,7 +222,7 @@ break_loop:
 		vk := versionKinds[i]
 		found := false
 		for _, k := range vk.Kinds {
-			if in.Equals(k.ConvertDownSpec()) {
+			if in.EqualKinds(k.ConvertDownSpec()) {
 				out, err = k.ConvertDown(cv, in)
 				if err != nil {
 					return nil, errors.Wrapf(err, "ConvertDown for %s cannot convert %s", k.GetDefaultTypeMeta(), in)
@@ -251,7 +251,7 @@ convertUp:
 		vk := versionKinds[i]
 		found := false
 		for _, k := range vk.Kinds {
-			if in.Equals(k.ConvertUpSpec()) {
+			if in.EqualKinds(k.ConvertUpSpec()) {
 				out, err = k.ConvertUp(cv, in)
 				if err != nil {
 					return nil, errors.Wrapf(err, "ConvertUp for %s cannot convert %s", k.GetDefaultTypeMeta(), in)
@@ -340,15 +340,36 @@ func (cv *Converter) Unmarshal(b []byte, k Kind) error {
 
 // String ...
 func (s *KindSpec) String() string {
-	str := "ConverterSpec{ "
-	for _, k := range s.Kinds {
-		str += k.GetDefaultTypeMeta().String() + " "
-	}
-	str += "}"
+	str := "KindSpec{ "
+	str += s.kindsString()
 	return str
 }
 
-// Equals ...
-func (s *KindSpec) Equals(e *KindSpec) bool {
-	return s.String() == e.String()
+// kindsString ...
+func (s *KindSpec) kindsString() string {
+	str := ""
+	for _, k := range s.Kinds {
+		if k == nil {
+			str += "nil "
+			continue
+		}
+		str += k.GetDefaultTypeMeta().String() + " "
+	}
+	return str
+}
+
+// EqualKinds ...
+func (s *KindSpec) EqualKinds(e *KindSpec) bool {
+	return s.kindsString() == e.kindsString()
+}
+
+// WithKinds ...
+func (s *KindSpec) WithKinds(in ...Kind) *KindSpec {
+	s.Kinds = in
+	return s
+}
+
+// NewKindSpec ...
+func NewKindSpec() *KindSpec {
+	return &KindSpec{}
 }

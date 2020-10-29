@@ -126,7 +126,7 @@ func TestConvert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cs := &KindSpec{Kinds: []Kind{objOriginal}}
+	cs := NewKindSpec().WithKinds(objOriginal)
 	cs, err = cv.ConvertToOldest(cs, testGroup)
 	if err != nil {
 		t.Fatalf("failed converting to oldest: %v", err)
@@ -155,11 +155,11 @@ type testFoo struct {
 
 func (*testFoo) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error)   { return nil, nil }
 func (*testFoo) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) { return nil, nil }
-func (*testFoo) ConvertUpSpec() *KindSpec                                      { return &KindSpec{} }
-func (*testFoo) ConvertDownSpec() *KindSpec                                    { return &KindSpec{Kinds: []Kind{&testFoo{}}} }
-func (*testFoo) Validate() error                                                  { return nil }
-func (*testFoo) Default() error                                                   { return nil }
-func (x *testFoo) GetTypeMeta() *metav1.TypeMeta                                  { return &x.TypeMeta }
+func (*testFoo) ConvertUpSpec() *KindSpec                                   { return NewKindSpec() }
+func (*testFoo) ConvertDownSpec() *KindSpec                                 { return NewKindSpec().WithKinds(&testFoo{}) }
+func (*testFoo) Validate() error                                            { return nil }
+func (*testFoo) Default() error                                             { return nil }
+func (x *testFoo) GetTypeMeta() *metav1.TypeMeta                            { return &x.TypeMeta }
 func (*testFoo) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: testGroup + "/v1beta1", Kind: "testFoo"}
 }
@@ -180,17 +180,17 @@ func (*testBar) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 		cached := cachedKind.(*testBar)
 		new.B = cached.B
 	}
-	return &KindSpec{Kinds: []Kind{new}}, nil
+	return NewKindSpec().WithKinds(new), nil
 }
 func (*testBar) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	ink := in.Kinds[0]
 	cv.AddToCache(ink)
 	new := &testFoo{}
 	cv.DeepCopy(new, ink)
-	return &KindSpec{Kinds: []Kind{new}}, nil
+	return NewKindSpec().WithKinds(new), nil
 }
-func (*testBar) ConvertUpSpec() *KindSpec     { return &KindSpec{Kinds: []Kind{&testFoo{}}} }
-func (*testBar) ConvertDownSpec() *KindSpec   { return &KindSpec{Kinds: []Kind{&testBar{}}} }
+func (*testBar) ConvertUpSpec() *KindSpec        { return NewKindSpec().WithKinds(&testFoo{}) }
+func (*testBar) ConvertDownSpec() *KindSpec      { return NewKindSpec().WithKinds(&testBar{}) }
 func (*testBar) Validate() error                 { return nil }
 func (*testBar) Default() error                  { return nil }
 func (x *testBar) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
@@ -215,17 +215,17 @@ func (*testZed) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 		cached := cachedKind.(*testZed)
 		new.C = cached.C
 	}
-	return &KindSpec{Kinds: []Kind{new}}, nil
+	return NewKindSpec().WithKinds(new), nil
 }
 func (*testZed) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	ink := in.Kinds[0]
 	cv.AddToCache(ink)
 	new := &testBar{}
 	cv.DeepCopy(new, ink)
-	return &KindSpec{Kinds: []Kind{new}}, nil
+	return NewKindSpec().WithKinds(new), nil
 }
-func (*testZed) ConvertUpSpec() *KindSpec     { return &KindSpec{Kinds: []Kind{&testBar{}}} }
-func (*testZed) ConvertDownSpec() *KindSpec   { return &KindSpec{Kinds: []Kind{&testZed{}}} }
+func (*testZed) ConvertUpSpec() *KindSpec        { return NewKindSpec().WithKinds(&testBar{}) }
+func (*testZed) ConvertDownSpec() *KindSpec      { return NewKindSpec().WithKinds(&testZed{}) }
 func (*testZed) Validate() error                 { return nil }
 func (*testZed) Default() error                  { return nil }
 func (x *testZed) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
