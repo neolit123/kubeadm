@@ -64,13 +64,13 @@ func ValidateGroups(groups []Group) error {
 
 // AddToCache ...
 func (cv *Converter) AddToCache(kind Kind) {
-	key := kind.GetTypeMeta().String()
+	key := kind.GetDefaultTypeMeta().String()
 	cv.cache[key] = cv.DeepCopy(nil, kind)
 }
 
 // GetFromCache ...
 func (cv *Converter) GetFromCache(kind Kind) Kind {
-	key := kind.GetTypeMeta().String()
+	key := kind.GetDefaultTypeMeta().String()
 	cached, ok := cv.cache[key]
 	if !ok {
 		return nil
@@ -116,7 +116,7 @@ func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 					continue
 				}
 				new := cv.NewObject(k)
-				cv.SetGetDefaultTypeMeta(new)
+				cv.SetDefaultTypeMeta(new)
 				return new, nil
 			}
 		}
@@ -145,39 +145,86 @@ func (cv *Converter) DeepCopy(dst Kind, src Kind) Kind {
 	if err := cv.Unmarshal(bytes, dst); err != nil {
 		panic("error unmarshal: " + err.Error())
 	}
-	cv.SetGetDefaultTypeMeta(dst)
+	cv.SetDefaultTypeMeta(dst)
 	return dst
 }
 
 // getGroup ...
-func (cv *Converter) getGroup(name string) (*Group, error) {
+func (cv *Converter) getGroup(name string) (*Group, int, error) {
 	if len(cv.groups) == 0 {
-		return nil, errors.New("no groups defined")
+		return nil, -1, errors.New("no groups defined")
 	}
 	for i := range cv.groups {
 		g := cv.groups[i]
 		if name == g.Name {
-			return &g, nil
+			return &g, i, nil
 		}
 	}
-	return nil, errors.Errorf("unknown group %q", name)
+	return nil, -1, errors.Errorf("unknown group %q", name)
 }
 
 // ConvertTo ...
-// TODO: support accross groups is possible, but not implemented yet.
-func (cv *Converter) ConvertTo(in *KindSpec, group, targetVersion string) (*KindSpec, error) {
+func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) (*KindSpec, error) {
 	if in == nil {
 		return nil, errors.New("ConvertTo received a nil KindSpec")
 	}
 	if len(in.Kinds) == 0 {
 		return nil, errors.New("ConvertTo received an empty list of Kinds")
 	}
-	g, err := cv.getGroup(group)
+
+	// get the source and target groups
+	targetGroupObj, targetGroupIdx, err := cv.getGroup(targetGroup)
 	if err != nil {
 		return nil, err
 	}
-	versionKinds := g.Versions
+	sourceGroup := in.Kinds[0].GetDefaultTypeMeta().GroupVersionKind().Group
+	sourceGroupObj, sourceGroupIdx, err := cv.getGroup(sourceGroup)
+	if err != nil {
+		return nil, err
+	}
 
+	var versionKinds = targetGroupObj.Versions
+	if targetGroupIdx == sourceGroupIdx {
+		goto convertSameGroup
+	} else if targetGroupIdx < sourceGroupIdx {
+		versionKinds = sourceGroupObj.Versions
+	}
+
+	for _, vk := range versionKinds {
+		for _, k := range vk.Kinds {
+			if sourceGroupIdx < targetGroupIdx {
+				if in.EqualKinds(k.ConvertUpSpec()) {
+					out, err := k.ConvertUp(cv, in)
+					if err != nil {
+						return nil, errors.Wrapf(err, "ConvertUp for %s cannot convert %s", k.GetDefaultTypeMeta(), in)
+					}
+					if out == nil {
+						return nil, errors.Wrapf(err, "ConvertUp for %s returned nil", k.GetDefaultTypeMeta())
+					}
+					if len(out.Kinds) == 0 {
+						return nil, errors.Wrapf(err, "ConvertUp for %s returned an empty list of Kinds", k.GetDefaultTypeMeta())
+					}
+					return out, nil
+				}
+			} else {
+				if in.EqualKinds(k.ConvertDownSpec()) {
+					out, err := k.ConvertDown(cv, in)
+					if err != nil {
+						return nil, errors.Wrapf(err, "ConvertDown for %s cannot convert %s", k.GetDefaultTypeMeta(), in)
+					}
+					if out == nil {
+						return nil, errors.Wrapf(err, "ConvertDown for %s returned nil", k.GetDefaultTypeMeta())
+					}
+					if len(out.Kinds) == 0 {
+						return nil, errors.Wrapf(err, "ConvertDown for %s returned an empty list of Kinds", k.GetDefaultTypeMeta())
+					}
+					return out, nil
+				}
+			}
+		}
+	}
+
+convertSameGroup:
 	// get the current version index
 	versionIdx := -1
 	for i := 0; i < len(versionKinds); i++ {
@@ -185,13 +232,13 @@ func (cv *Converter) ConvertTo(in *KindSpec, group, targetVersion string) (*Kind
 		for _, k := range vk.Kinds {
 			if in.EqualKinds(k.ConvertDownSpec()) {
 				versionIdx = i
-				goto break_loop
+				goto breakLoop
 			}
 		}
 	}
-break_loop:
+breakLoop:
 	if versionIdx == -1 {
-		return nil, errors.Errorf("cannot find %s in group %q", in, group)
+		return nil, errors.Errorf("cannot find %s in group %q", in, targetGroup)
 	}
 
 	// get the target version index
@@ -275,23 +322,23 @@ convertUp:
 }
 
 // ConvertToLatest ...
-func (cv *Converter) ConvertToLatest(in *KindSpec, group string) (*KindSpec, error) {
-	g, err := cv.getGroup(group)
+func (cv *Converter) ConvertToLatest(in *KindSpec, targetGroup string) (*KindSpec, error) {
+	g, _, err := cv.getGroup(targetGroup)
 	if err != nil {
 		return nil, err
 	}
 	latest := g.Versions[len(g.Versions)-1]
-	return cv.ConvertTo(in, group, latest.Version)
+	return cv.ConvertTo(in, targetGroup, latest.Version)
 }
 
 // ConvertToOldest ...
-func (cv *Converter) ConvertToOldest(in *KindSpec, group string) (*KindSpec, error) {
-	g, err := cv.getGroup(group)
+func (cv *Converter) ConvertToOldest(in *KindSpec, targetGroup string) (*KindSpec, error) {
+	g, _, err := cv.getGroup(targetGroup)
 	if err != nil {
 		return nil, err
 	}
 	oldest := g.Versions[0]
-	return cv.ConvertTo(in, group, oldest.Version)
+	return cv.ConvertTo(in, targetGroup, oldest.Version)
 }
 
 // TypeMetaFromBytes ...
@@ -306,8 +353,8 @@ func (cv *Converter) TypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error) {
 	return typemeta, nil
 }
 
-// SetGetDefaultTypeMeta ...
-func (cv *Converter) SetGetDefaultTypeMeta(kind Kind) {
+// SetDefaultTypeMeta ...
+func (cv *Converter) SetDefaultTypeMeta(kind Kind) {
 	typemeta := kind.GetTypeMeta()
 	*typemeta = *kind.GetDefaultTypeMeta()
 }
