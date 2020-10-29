@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"k8s.io/kubeadm/api/kubeadm"
-	"k8s.io/kubeadm/api/kubeadm/scheme"
+	"k8s.io/kubeadm/api/kubeadm/groups"
 	"k8s.io/kubeadm/api/kubeadm/v1beta2"
 	"k8s.io/kubeadm/api/pkg"
 )
@@ -78,11 +78,14 @@ var input = []byte(`
 `)
 
 func TestDemo(t *testing.T) {
-	cv := pkg.NewConverter(scheme.Groups)
+	cv, err := pkg.NewConverter(kubeadm.Groups)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cv.SetUnmarshalFunc(json.Unmarshal)
 	cv.SetMarshalFunc(json.Marshal)
 
-	docs, err := cv.SplitDocuments(input)
+	docs, err := pkg.SplitDocuments(input)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,25 +115,26 @@ func TestDemo(t *testing.T) {
 			t.Fatal("marshal", err)
 		}
 
-		obj, err = cv.ConvertTo(obj, kubeadm.GroupKubeadm, "v1beta1")
+		spec := &pkg.ConvertSpec{Kinds: []pkg.Kind{obj}}
+		spec, err = cv.ConvertTo(spec, groups.GroupKubeadm, "v1beta1")
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("\n2-------- %#v\n", obj)
+		t.Logf("\n2-------- %#v\n", spec)
 
-		data, err := cv.Marshal(obj)
+		data, err := cv.Marshal(spec.Kinds[0])
 		if err != nil {
 			t.Fatal("marshal", err)
 		}
 		t.Logf("\n3-------- %s\n", data)
 
-		obj, err = cv.ConvertTo(obj, kubeadm.GroupKubeadm, "v1beta2")
+		spec, err = cv.ConvertTo(spec, groups.GroupKubeadm, "v1beta2")
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("\n4-------- %#v\n", obj)
+		t.Logf("\n4-------- %#v\n", spec)
 
-		new, err := cv.Marshal(obj)
+		new, err := cv.Marshal(spec.Kinds[0])
 		if err != nil {
 			t.Fatal("marshal", err)
 		}

@@ -22,9 +22,10 @@ import (
 )
 
 // ConvertUp ...
-func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+	ink := in.Kinds[0]
 	new := &InitConfiguration{}
-	cv.DeepCopy(new, in)
+	cv.DeepCopy(new, ink)
 	// restore from cache
 	cachedKind := cv.GetFromCache(new)
 	if cachedKind != nil {
@@ -33,66 +34,85 @@ func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, e
 		new.NodeRegistration.IgnorePreflightErrors = make([]string, len(cached.NodeRegistration.IgnorePreflightErrors))
 		copy(new.NodeRegistration.IgnorePreflightErrors, cached.NodeRegistration.IgnorePreflightErrors)
 	}
-	return new, nil
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{new}}, nil
 }
 
 // ConvertDown ...
-func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
-	cv.AddToCache(in)
+func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+	ink := in.Kinds[0]
+	cv.AddToCache(ink)
 	new := &v1beta1.InitConfiguration{}
-	cv.DeepCopy(new, in)
-	return new, nil
+	cv.DeepCopy(new, ink)
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{new}}, nil
 }
 
-// ConvertUpName ...
-func (*InitConfiguration) ConvertUpName() string {
-	return (*v1beta1.InitConfiguration)(nil).GetDefaultTypeMeta().Kind
+// ConvertUpSpec ...
+func (*InitConfiguration) ConvertUpSpec() *pkg.ConvertSpec {
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&v1beta1.InitConfiguration{}}}
+}
+
+// ConvertDownSpec ...
+func (*InitConfiguration) ConvertDownSpec() *pkg.ConvertSpec {
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&InitConfiguration{}}}
 }
 
 // -------
 
 // ConvertUp ...
-func (*ClusterConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+func (*ClusterConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+	ink := in.Kinds[0]
 	new := &ClusterConfiguration{}
-	cv.DeepCopy(new, in)
-	return new, nil
+	cv.DeepCopy(new, ink)
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{new}}, nil
 }
 
 // ConvertDown ...
-func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+	ink := in.Kinds[0]
 	new := &v1beta1.ClusterConfiguration{}
-	cv.DeepCopy(new, in)
-	return new, nil
+	cv.DeepCopy(new, ink)
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{new}}, nil
 }
 
-// ConvertUpName ...
-func (*ClusterConfiguration) ConvertUpName() string {
-	return (*v1beta1.ClusterConfiguration)(nil).GetDefaultTypeMeta().Kind
+// ConvertUpSpec ...
+func (*ClusterConfiguration) ConvertUpSpec() *pkg.ConvertSpec {
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&v1beta1.ClusterConfiguration{}}}
+}
+
+// ConvertDownSpec ...
+func (*ClusterConfiguration) ConvertDownSpec() *pkg.ConvertSpec {
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&ClusterConfiguration{}}}
 }
 
 // -------
 
 // ConvertUp ...
-func (*ClusterStatus) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+func (*ClusterStatus) ConvertUp(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
 	return in, nil
 }
 
 // ConvertDown ...
-func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
 	return in, nil
 }
 
-// ConvertUpName ...
-func (*ClusterStatus) ConvertUpName() string {
-	return (*v1beta1.ClusterStatus)(nil).GetDefaultTypeMeta().Kind
+// ConvertUpSpec ...
+func (*ClusterStatus) ConvertUpSpec() *pkg.ConvertSpec {
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&v1beta1.ClusterStatus{}}}
+}
+
+// ConvertDownSpec ...
+func (*ClusterStatus) ConvertDownSpec() *pkg.ConvertSpec {
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&ClusterStatus{}}}
 }
 
 // -------
 
 // ConvertUp ...
-func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
+func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+	ink := in.Kinds[0]
 	new := &JoinConfiguration{}
-	cv.DeepCopy(new, in)
+	cv.DeepCopy(new, ink)
 	// restore from cache
 	cachedKind := cv.GetFromCache(new)
 	if cachedKind != nil {
@@ -100,18 +120,24 @@ func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, e
 		new.NodeRegistration.IgnorePreflightErrors = make([]string, len(cached.NodeRegistration.IgnorePreflightErrors))
 		copy(new.NodeRegistration.IgnorePreflightErrors, cached.NodeRegistration.IgnorePreflightErrors)
 	}
-	return new, nil
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{new}}, nil
 }
 
 // ConvertDown ...
-func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in pkg.Kind) (pkg.Kind, error) {
-	cv.AddToCache(in)
+func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.ConvertSpec) (*pkg.ConvertSpec, error) {
+	ink := in.Kinds[0]
+	cv.AddToCache(ink)
 	new := &v1beta1.JoinConfiguration{}
-	cv.DeepCopy(new, in)
-	return new, nil
+	cv.DeepCopy(new, ink)
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{new}}, nil
 }
 
-// ConvertUpName ...
-func (*JoinConfiguration) ConvertUpName() string {
-	return (*v1beta1.JoinConfiguration)(nil).GetDefaultTypeMeta().Kind
+// ConvertUpSpec ...
+func (*JoinConfiguration) ConvertUpSpec() *pkg.ConvertSpec {
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&v1beta1.JoinConfiguration{}}}
+}
+
+// ConvertDownSpec ...
+func (*JoinConfiguration) ConvertDownSpec() *pkg.ConvertSpec {
+	return &pkg.ConvertSpec{Kinds: []pkg.Kind{&JoinConfiguration{}}}
 }

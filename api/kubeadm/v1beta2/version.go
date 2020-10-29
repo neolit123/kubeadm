@@ -19,7 +19,7 @@ package v1beta2
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/kubeadm/api/kubeadm"
+	"k8s.io/kubeadm/api/kubeadm/groups"
 )
 
 // Version ...
@@ -32,7 +32,7 @@ func (x *InitConfiguration) GetTypeMeta() *metav1.TypeMeta {
 
 // GetDefaultTypeMeta ...
 func (*InitConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {
-	return &metav1.TypeMeta{APIVersion: kubeadm.GroupKubeadm + "/" + Version, Kind: "InitConfiguration"}
+	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "InitConfiguration"}
 }
 
 // ---------------
@@ -44,7 +44,7 @@ func (x *ClusterConfiguration) GetTypeMeta() *metav1.TypeMeta {
 
 // GetDefaultTypeMeta ...
 func (*ClusterConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {
-	return &metav1.TypeMeta{APIVersion: kubeadm.GroupKubeadm + "/" + Version, Kind: "ClusterConfiguration"}
+	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "ClusterConfiguration"}
 }
 
 // ---------------
@@ -56,7 +56,7 @@ func (x *ClusterStatus) GetTypeMeta() *metav1.TypeMeta {
 
 // GetDefaultTypeMeta ...
 func (*ClusterStatus) GetDefaultTypeMeta() *metav1.TypeMeta {
-	return &metav1.TypeMeta{APIVersion: kubeadm.GroupKubeadm + "/" + Version, Kind: "ClusterStatus"}
+	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "ClusterStatus"}
 }
 
 // ---------------
@@ -68,5 +68,5 @@ func (x *JoinConfiguration) GetTypeMeta() *metav1.TypeMeta {
 
 // GetDefaultTypeMeta ...
 func (*JoinConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {
-	return &metav1.TypeMeta{APIVersion: kubeadm.GroupKubeadm + "/" + Version, Kind: "JoinConfiguration"}
+	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "JoinConfiguration"}
 }

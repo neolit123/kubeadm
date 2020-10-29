@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package scheme
+package kubeadm
 
 import (
-	"k8s.io/kubeadm/api/kubeadm"
+	"k8s.io/kubeadm/api/kubeadm/groups"
 	"k8s.io/kubeadm/api/kubeadm/v1beta1"
 	"k8s.io/kubeadm/api/kubeadm/v1beta2"
 	"k8s.io/kubeadm/api/pkg"
@@ -26,7 +26,7 @@ import (
 // Groups ...
 var Groups = []pkg.Group{
 	pkg.Group{
-		Name: kubeadm.GroupKubeadm,
+		Name: groups.GroupKubeadm,
 		Versions: []pkg.VersionKinds{
 			{
 				Version: v1beta1.Version,
