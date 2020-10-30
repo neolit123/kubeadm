@@ -49,14 +49,49 @@ func ValidateGroups(groups []Group) error {
 				return errors.Errorf("group %q has a version with empty name", g.Name)
 			}
 			for _, k := range vk.Kinds {
+				t := reflect.TypeOf(k)
 				gvk := k.GetDefaultTypeMeta().GroupVersionKind()
 				if gvk.Group != g.Name {
-					return errors.Errorf("expected group for object %v: %q, got: %q", reflect.TypeOf(k), g.Name, gvk.Group)
+					return errors.Errorf("expected group for object %v: %q, got: %q", t, g.Name, gvk.Group)
 				}
 				if gvk.Version != vk.Version {
-					return errors.Errorf("expected version for object %v: %q, got: %q", reflect.TypeOf(k), vk.Version, gvk.Version)
+					return errors.Errorf("expected version for object %v: %q, got: %q", t, vk.Version, gvk.Version)
+				}
+				if gvk.Kind == "" {
+					return errors.Errorf("empty Kind for object %v", t)
+				}
+				if err := ValidateKindSpec(k.ConvertUpSpec()); err != nil {
+					return errors.Wrapf(err, "error in ConvertUpSpec for %v", t)
+				}
+				if err := ValidateKindSpec(k.ConvertDownSpec()); err != nil {
+					return errors.Wrapf(err, "error in ConvertDownSpec for %v", t)
 				}
 			}
+		}
+	}
+	return nil
+}
+
+// ValidateKindSpec ...
+func ValidateKindSpec(in *KindSpec) error {
+	if in == nil {
+		return errors.New("nil spec")
+	}
+	var groupVersion string
+	for i, k := range in.Kinds {
+		tm := k.GetDefaultTypeMeta()
+		if tm.APIVersion == "" {
+			return errors.Errorf("object with empty APIVersion at position %d", i)
+		}
+		if tm.Kind == "" {
+			return errors.Errorf("object with empty Kind at position %d", i)
+		}
+		if groupVersion == "" {
+			groupVersion = tm.APIVersion
+			continue
+		}
+		if groupVersion != tm.APIVersion {
+			return errors.Errorf("found multiple APIVersions")
 		}
 	}
 	return nil
@@ -165,160 +200,104 @@ func (cv *Converter) getGroup(name string) (*Group, int, error) {
 
 // ConvertTo ...
 func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) (*KindSpec, error) {
-	if in == nil {
-		return nil, errors.New("ConvertTo received a nil KindSpec")
+	if err := ValidateKindSpec(in); err != nil {
+		return nil, err
 	}
 	if len(in.Kinds) == 0 {
-		return nil, errors.New("ConvertTo received an empty list of Kinds")
+		return nil, errors.New("empty input spec")
 	}
 
-	// get the source and target groups
-	targetGroupObj, targetGroupIdx, err := cv.getGroup(targetGroup)
+	_, targetGroupIdx, err := cv.getGroup(targetGroup)
 	if err != nil {
 		return nil, err
 	}
-	sourceGroup := in.Kinds[0].GetDefaultTypeMeta().GroupVersionKind().Group
-	sourceGroupObj, sourceGroupIdx, err := cv.getGroup(sourceGroup)
+	sourceGVK := in.Kinds[0].GetDefaultTypeMeta().GroupVersionKind()
+	sourceGroupObj, sourceGroupIdx, err := cv.getGroup(sourceGVK.Group)
 	if err != nil {
 		return nil, err
 	}
 
-	var versionKinds = targetGroupObj.Versions
-	if targetGroupIdx == sourceGroupIdx {
-		goto convertSameGroup
-	} else if targetGroupIdx < sourceGroupIdx {
-		versionKinds = sourceGroupObj.Versions
-	}
+	var start, end, step int
+	var convertUp bool
+	var convertSpecString string
 
-	for _, vk := range versionKinds {
-		for _, k := range vk.Kinds {
-			if sourceGroupIdx < targetGroupIdx {
-				if in.EqualKinds(k.ConvertUpSpec()) {
-					out, err := k.ConvertUp(cv, in)
-					if err != nil {
-						return nil, errors.Wrapf(err, "ConvertUp for %s cannot convert %s", k.GetDefaultTypeMeta(), in)
-					}
-					if out == nil {
-						return nil, errors.Wrapf(err, "ConvertUp for %s returned nil", k.GetDefaultTypeMeta())
-					}
-					if len(out.Kinds) == 0 {
-						return nil, errors.Wrapf(err, "ConvertUp for %s returned an empty list of Kinds", k.GetDefaultTypeMeta())
-					}
-					return out, nil
-				}
-			} else {
-				if in.EqualKinds(k.ConvertDownSpec()) {
-					out, err := k.ConvertDown(cv, in)
-					if err != nil {
-						return nil, errors.Wrapf(err, "ConvertDown for %s cannot convert %s", k.GetDefaultTypeMeta(), in)
-					}
-					if out == nil {
-						return nil, errors.Wrapf(err, "ConvertDown for %s returned nil", k.GetDefaultTypeMeta())
-					}
-					if len(out.Kinds) == 0 {
-						return nil, errors.Wrapf(err, "ConvertDown for %s returned an empty list of Kinds", k.GetDefaultTypeMeta())
-					}
-					return out, nil
-				}
+	// flatten
+	kinds := []Kind{}
+	for _, g := range cv.groups {
+		for _, vk := range g.Versions {
+			for _, k := range vk.Kinds {
+				kinds = append(kinds, k)
 			}
 		}
 	}
 
-convertSameGroup:
-	// get the current version index
-	versionIdx := -1
-	for i := 0; i < len(versionKinds); i++ {
-		vk := versionKinds[i]
-		for _, k := range vk.Kinds {
-			if in.EqualKinds(k.ConvertDownSpec()) {
-				versionIdx = i
-				goto breakLoop
+	if sourceGroupIdx < targetGroupIdx {
+		goto covertUp
+	} else if sourceGroupIdx > targetGroupIdx {
+		goto covertDown
+	} else {
+		sourceVersionIdx := -1
+		targetVersionIdx := -1
+		for i, v := range sourceGroupObj.Versions {
+			if sourceGVK.Version == v.Version {
+				sourceVersionIdx = i
+			}
+			if targetVersion == v.Version {
+				targetVersionIdx = i
 			}
 		}
-	}
-breakLoop:
-	if versionIdx == -1 {
-		return nil, errors.Errorf("cannot find %s in group %q", in, targetGroup)
-	}
-
-	// get the target version index
-	targetVersionIdx := -1
-	for i, vk := range versionKinds {
-		if targetVersion == vk.Version {
-			targetVersionIdx = i
-			break
+		if sourceVersionIdx < targetVersionIdx {
+			goto covertUp
+		} else if sourceVersionIdx > targetVersionIdx {
+			goto covertDown
+		} else {
+			// nothing to do
+			return in, nil
 		}
 	}
-	if targetVersionIdx == -1 {
-		return nil, errors.Errorf("unknown target version %s", targetVersion)
-	}
 
-	// already target version
-	if versionIdx == targetVersionIdx {
-		return in, nil
-	}
+covertUp:
+	start = 0
+	end = len(kinds)
+	step = 1
+	convertUp = true
+	convertSpecString = "ConvertUpSpec"
+	goto convert
 
-	var out = in
-	if versionIdx < targetVersionIdx {
-		goto convertUp
-	}
+covertDown:
+	start = len(kinds) - 1
+	end = -1
+	step = -1
+	convertSpecString = "ConvertDownSpec"
+	convertUp = false
 
-	// To convert down, iterate from the current version until the target version
-	// is reached (not including).
-	for i := versionIdx; i > targetVersionIdx; i-- {
-		vk := versionKinds[i]
-		found := false
-		for _, k := range vk.Kinds {
-			if in.EqualKinds(k.ConvertDownSpec()) {
-				out, err = k.ConvertDown(cv, in)
-				if err != nil {
-					return nil, errors.Wrapf(err, "ConvertDown for %s cannot convert %s", k.GetDefaultTypeMeta(), in)
-				}
-				if out == nil {
-					return nil, errors.Wrapf(err, "ConvertDown for %s returned nil", k.GetDefaultTypeMeta())
-				}
-				if len(out.Kinds) == 0 {
-					return nil, errors.Wrapf(err, "ConvertDown for %s returned an empty list of Kinds", k.GetDefaultTypeMeta())
-				}
-				in = out
-				found = true
-				break
-			}
+convert:
+	var out *KindSpec
+	var convertFunc func(*Converter, *KindSpec) (*KindSpec, error)
+	var convertSpecFunc func() *KindSpec
+	for i := start; i != end; i += step {
+		k := kinds[i]
+		if convertUp {
+			convertFunc = k.ConvertUp
+			convertSpecFunc = k.ConvertUpSpec
+		} else {
+			convertFunc = k.ConvertDown
+			convertSpecFunc = k.ConvertDownSpec
 		}
-		if !found {
-			return nil, errors.Errorf("cannot down convert %s, no matching ConvertDownSpec() in version %q", in, vk.Version)
+		if !in.EqualKinds(convertSpecFunc()) {
+			continue
 		}
+		out, err = convertFunc(cv, in)
+		if err != nil {
+			return nil, err
+		}
+		gvk := out.Kinds[0].GetDefaultTypeMeta().GroupVersionKind()
+		if gvk.Group == targetGroup && gvk.Version == targetVersion {
+			return out, nil
+		}
+		in = out
 	}
-	return out, nil
-
-	// To convert up, iterate from the current version index + 1 (next version)
-	// until the target version is reached (including).
-convertUp:
-	for i := versionIdx + 1; i < targetVersionIdx+1; i++ {
-		vk := versionKinds[i]
-		found := false
-		for _, k := range vk.Kinds {
-			if in.EqualKinds(k.ConvertUpSpec()) {
-				out, err = k.ConvertUp(cv, in)
-				if err != nil {
-					return nil, errors.Wrapf(err, "ConvertUp for %s cannot convert %s", k.GetDefaultTypeMeta(), in)
-				}
-				if out == nil {
-					return nil, errors.Wrapf(err, "ConvertUp for %s returned nil", k.GetDefaultTypeMeta())
-				}
-				if len(out.Kinds) == 0 {
-					return nil, errors.Wrapf(err, "ConvertUp for %s returned an empty list of Kinds", k.GetDefaultTypeMeta())
-				}
-				in = out
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, errors.Errorf("cannot up convert %s, no matching ConvertUpSpec() in version %q", in, vk.Version)
-		}
-	}
-	return out, nil
+	return nil, errors.Errorf("no matching %s for %s", convertSpecString, in)
 }
 
 // ConvertToLatest ...
