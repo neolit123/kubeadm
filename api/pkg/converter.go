@@ -17,6 +17,9 @@ limitations under the License.
 package pkg
 
 import (
+	"encoding/json"
+	"io"
+	"io/ioutil"
 	"reflect"
 
 	"github.com/pkg/errors"
@@ -25,76 +28,37 @@ import (
 )
 
 // NewConverter ...
-func NewConverter(groups []Group) (*Converter, error) {
-	if err := ValidateGroups(groups); err != nil {
-		return nil, err
-	}
+func NewConverter() *Converter {
 	return &Converter{
-		groups: groups,
-		cache:  map[string]Kind{},
-	}, nil
+		output:        ioutil.Discard,
+		cache:         map[string]Kind{},
+		marshalFunc:   json.Marshal,
+		unmarshalFunc: json.Unmarshal,
+	}
 }
 
-// ValidateGroups ...
-func ValidateGroups(groups []Group) error {
-	if len(groups) == 0 {
-		return errors.New("found an empty or nil list of groups")
-	}
-	for _, g := range groups {
-		if len(g.Name) == 0 {
-			return errors.New("found an empty group name")
-		}
-		for _, vk := range g.Versions {
-			if len(vk.Version) == 0 {
-				return errors.Errorf("group %q has a version with empty name", g.Name)
-			}
-			for _, k := range vk.Kinds {
-				t := reflect.TypeOf(k)
-				gvk := k.GetDefaultTypeMeta().GroupVersionKind()
-				if gvk.Group != g.Name {
-					return errors.Errorf("expected group for object %v: %q, got: %q", t, g.Name, gvk.Group)
-				}
-				if gvk.Version != vk.Version {
-					return errors.Errorf("expected version for object %v: %q, got: %q", t, vk.Version, gvk.Version)
-				}
-				if gvk.Kind == "" {
-					return errors.Errorf("empty Kind for object %v", t)
-				}
-				if err := ValidateKindSpec(k.ConvertUpSpec()); err != nil {
-					return errors.Wrapf(err, "error in ConvertUpSpec for %v", t)
-				}
-				if err := ValidateKindSpec(k.ConvertDownSpec()); err != nil {
-					return errors.Wrapf(err, "error in ConvertDownSpec for %v", t)
-				}
-			}
-		}
-	}
-	return nil
+// WithGroups ...
+func (cv *Converter) WithGroups(groups []Group) *Converter {
+	cv.groups = groups
+	return cv
 }
 
-// ValidateKindSpec ...
-func ValidateKindSpec(in *KindSpec) error {
-	if in == nil {
-		return errors.New("nil spec")
-	}
-	var groupVersion string
-	for i, k := range in.Kinds {
-		tm := k.GetDefaultTypeMeta()
-		if tm.APIVersion == "" {
-			return errors.Errorf("object with empty APIVersion at position %d", i)
-		}
-		if tm.Kind == "" {
-			return errors.Errorf("object with empty Kind at position %d", i)
-		}
-		if groupVersion == "" {
-			groupVersion = tm.APIVersion
-			continue
-		}
-		if groupVersion != tm.APIVersion {
-			return errors.Errorf("found multiple APIVersions")
-		}
-	}
-	return nil
+// WithOutput ...
+func (cv *Converter) WithOutput(output io.Writer) *Converter {
+	cv.output = output
+	return cv
+}
+
+// WithMarshalFunc ...
+func (cv *Converter) WithMarshalFunc(f func(interface{}) ([]byte, error)) *Converter {
+	cv.marshalFunc = f
+	return cv
+}
+
+// WithUnmarshalFunc ...
+func (cv *Converter) WithUnmarshalFunc(f func([]byte, interface{}) error) *Converter {
+	cv.unmarshalFunc = f
+	return cv
 }
 
 // AddToCache ...
@@ -156,7 +120,7 @@ func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 			}
 		}
 	}
-	return nil, errors.Errorf("no object for: %+v", typemeta)
+	return nil, errors.Errorf("no object for %s", typemeta)
 }
 
 // NewObject ...
@@ -336,16 +300,6 @@ func (cv *Converter) TypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error) {
 func (cv *Converter) SetDefaultTypeMeta(kind Kind) {
 	typemeta := kind.GetTypeMeta()
 	*typemeta = *kind.GetDefaultTypeMeta()
-}
-
-// SetMarshalFunc ...
-func (cv *Converter) SetMarshalFunc(f func(interface{}) ([]byte, error)) {
-	cv.marshalFunc = f
-}
-
-// SetUnmarshalFunc ...
-func (cv *Converter) SetUnmarshalFunc(f func([]byte, interface{}) error) {
-	cv.unmarshalFunc = f
 }
 
 // Marshal ...

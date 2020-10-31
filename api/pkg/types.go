@@ -17,6 +17,8 @@ limitations under the License.
 package pkg
 
 import (
+	"io"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -60,6 +62,7 @@ type Group struct {
 type Converter struct {
 	groups        []Group
 	cache         map[string]Kind
+	output        io.Writer
 	unmarshalFunc func([]byte, interface{}) error
 	marshalFunc   func(interface{}) ([]byte, error)
 }

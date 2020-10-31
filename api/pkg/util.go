@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"reflect"
 
 	"github.com/pkg/errors"
 
@@ -44,4 +45,71 @@ func SplitDocuments(b []byte) ([][]byte, error) {
 		docs = append(docs, doc)
 	}
 	return docs, nil
+}
+
+// JoinDocuments ...
+func JoinDocuments(docs [][]byte) []byte {
+	return bytes.Join(docs, []byte("\n---\n"))
+}
+
+// ValidateGroups ...
+func ValidateGroups(groups []Group) error {
+	if len(groups) == 0 {
+		return errors.New("found an empty or nil list of groups")
+	}
+	for _, g := range groups {
+		if len(g.Name) == 0 {
+			return errors.New("found an empty group name")
+		}
+		for _, vk := range g.Versions {
+			if len(vk.Version) == 0 {
+				return errors.Errorf("group %q has a version with empty name", g.Name)
+			}
+			for _, k := range vk.Kinds {
+				t := reflect.TypeOf(k)
+				gvk := k.GetDefaultTypeMeta().GroupVersionKind()
+				if gvk.Group != g.Name {
+					return errors.Errorf("expected group for object %v: %q, got: %q", t, g.Name, gvk.Group)
+				}
+				if gvk.Version != vk.Version {
+					return errors.Errorf("expected version for object %v: %q, got: %q", t, vk.Version, gvk.Version)
+				}
+				if gvk.Kind == "" {
+					return errors.Errorf("empty Kind for object %v", t)
+				}
+				if err := ValidateKindSpec(k.ConvertUpSpec()); err != nil {
+					return errors.Wrapf(err, "error in ConvertUpSpec for %v", t)
+				}
+				if err := ValidateKindSpec(k.ConvertDownSpec()); err != nil {
+					return errors.Wrapf(err, "error in ConvertDownSpec for %v", t)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// ValidateKindSpec ...
+func ValidateKindSpec(in *KindSpec) error {
+	if in == nil {
+		return errors.New("nil spec")
+	}
+	var groupVersion string
+	for i, k := range in.Kinds {
+		tm := k.GetDefaultTypeMeta()
+		if tm.APIVersion == "" {
+			return errors.Errorf("object with empty APIVersion at position %d", i)
+		}
+		if tm.Kind == "" {
+			return errors.Errorf("object with empty Kind at position %d", i)
+		}
+		if groupVersion == "" {
+			groupVersion = tm.APIVersion
+			continue
+		}
+		if groupVersion != tm.APIVersion {
+			return errors.Errorf("found multiple APIVersions")
+		}
+	}
+	return nil
 }

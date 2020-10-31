@@ -78,12 +78,7 @@ var input = []byte(`
 `)
 
 func TestDemo(t *testing.T) {
-	cv, err := pkg.NewConverter(kubeadm.Groups)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cv.SetUnmarshalFunc(json.Unmarshal)
-	cv.SetMarshalFunc(json.Marshal)
+	cv := pkg.NewConverter().WithGroups(kubeadm.Groups)
 
 	docs, err := pkg.SplitDocuments(input)
 	if err != nil {

@@ -18,7 +18,6 @@ package pkg
 
 import (
 	"bytes"
-	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -98,7 +97,7 @@ func TestValidateGroups(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := NewConverter(tc.groups)
+			err := ValidateGroups(tc.groups)
 			if (err != nil) != tc.expectedError {
 				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
 			}
@@ -130,12 +129,7 @@ func TestSplitDocuments(t *testing.T) {
 }
 
 func TestConvertBetweenGroups(t *testing.T) {
-	cv, err := NewConverter(testGroups)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cv.SetMarshalFunc(json.Marshal)
-	cv.SetUnmarshalFunc(json.Unmarshal)
+	cv := NewConverter().WithGroups(testGroups)
 
 	// convert from older to newer group
 	typemeta, err := cv.TypeMetaFromBytes(testZedJSON)
@@ -185,12 +179,7 @@ func TestConvertBetweenGroups(t *testing.T) {
 }
 
 func TestConvert(t *testing.T) {
-	cv, err := NewConverter(testGroups)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cv.SetMarshalFunc(json.Marshal)
-	cv.SetUnmarshalFunc(json.Unmarshal)
+	cv := NewConverter().WithGroups(testGroups)
 
 	typemeta, err := cv.TypeMetaFromBytes(testZedJSON)
 	if err != nil {
