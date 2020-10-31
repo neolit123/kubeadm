@@ -183,7 +183,7 @@ func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) 
 
 	var start, end, step int
 	var convertUp bool
-	var convertSpecString string
+	var convertString string
 
 	// flatten
 	kinds := []Kind{}
@@ -225,18 +225,20 @@ covertUp:
 	end = len(kinds)
 	step = 1
 	convertUp = true
-	convertSpecString = "ConvertUpSpec"
+	convertString = "converting up"
 	goto convert
 
 covertDown:
 	start = len(kinds) - 1
 	end = -1
 	step = -1
-	convertSpecString = "ConvertDownSpec"
+	convertString = "converting down"
 	convertUp = false
 
 convert:
-	var out *KindSpec
+	var originalInput = in
+	var lastKind Kind
+	var lastSpec *KindSpec
 	var convertFunc func(*Converter, *KindSpec) (*KindSpec, error)
 	var convertSpecFunc func() *KindSpec
 	for i := start; i != end; i += step {
@@ -248,20 +250,23 @@ convert:
 			convertFunc = k.ConvertDown
 			convertSpecFunc = k.ConvertDownSpec
 		}
-		if !in.EqualKinds(convertSpecFunc()) {
+		spec := convertSpecFunc()
+		if !in.EqualKinds(spec) {
 			continue
 		}
-		out, err = convertFunc(cv, in)
+		lastSpec = spec
+		in, err = convertFunc(cv, in)
 		if err != nil {
 			return nil, err
 		}
-		gvk := out.Kinds[0].GetDefaultTypeMeta().GroupVersionKind()
+		lastKind = k
+		gvk := in.Kinds[0].GetDefaultTypeMeta().GroupVersionKind()
 		if gvk.Group == targetGroup && gvk.Version == targetVersion {
-			return out, nil
+			return in, nil
 		}
-		in = out
 	}
-	return nil, errors.Errorf("no matching %s for %s", convertSpecString, in)
+	return nil, errors.Errorf("the converter did not reach %s/%s when %s for input %s: last matching spec: %s, last requested spec: %s, last called convert on: %v",
+		targetGroup, targetVersion, convertString, originalInput, lastSpec, in, reflect.TypeOf(lastKind))
 }
 
 // ConvertToLatest ...
@@ -325,8 +330,9 @@ func NewKindSpec() *KindSpec {
 
 // String ...
 func (s *KindSpec) String() string {
-	str := "KindSpec{ "
+	str := "KindSpec{"
 	str += s.kindsString()
+	str += "}"
 	return str
 }
 
@@ -335,10 +341,10 @@ func (s *KindSpec) kindsString() string {
 	str := ""
 	for _, k := range s.Kinds {
 		if k == nil {
-			str += "nil "
+			str += "nil,"
 			continue
 		}
-		str += k.GetDefaultTypeMeta().String() + " "
+		str += k.GetDefaultTypeMeta().String() + ","
 	}
 	return str
 }
