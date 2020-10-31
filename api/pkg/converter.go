@@ -318,6 +318,11 @@ func (cv *Converter) Unmarshal(b []byte, k Kind) error {
 	return cv.unmarshalFunc(b, k)
 }
 
+// NewKindSpec ...
+func NewKindSpec() *KindSpec {
+	return &KindSpec{}
+}
+
 // String ...
 func (s *KindSpec) String() string {
 	str := "KindSpec{ "
@@ -347,9 +352,4 @@ func (s *KindSpec) EqualKinds(e *KindSpec) bool {
 func (s *KindSpec) WithKinds(in ...Kind) *KindSpec {
 	s.Kinds = in
 	return s
-}
-
-// NewKindSpec ...
-func NewKindSpec() *KindSpec {
-	return &KindSpec{}
 }
