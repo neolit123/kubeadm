@@ -303,7 +303,7 @@ func (cv *Converter) SetDefaultTypeMeta(kind Kind) {
 }
 
 // Marshal ...
-func (cv *Converter) Marshal(k Kind) ([]byte, error) {
+func (cv *Converter) Marshal(k interface{}) ([]byte, error) {
 	if cv.marshalFunc == nil {
 		return nil, errors.New("marshal function not set")
 	}
@@ -311,7 +311,7 @@ func (cv *Converter) Marshal(k Kind) ([]byte, error) {
 }
 
 // Unmarshal ...
-func (cv *Converter) Unmarshal(b []byte, k Kind) error {
+func (cv *Converter) Unmarshal(b []byte, k interface{}) error {
 	if cv.unmarshalFunc == nil {
 		return errors.New("unmarshal function not set")
 	}
