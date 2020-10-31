@@ -88,12 +88,16 @@ func (*ClusterConfiguration) ConvertDownSpec() *pkg.KindSpec {
 
 // ConvertUp ...
 func (*ClusterStatus) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
-	return in, nil
+	new := &ClusterStatus{}
+	cv.DeepCopy(new, in.Kinds[0])
+	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
 // ConvertDown ...
 func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
-	return in, nil
+	new := &v1beta1.ClusterStatus{}
+	cv.DeepCopy(new, in.Kinds[0])
+	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
 // ConvertUpSpec ...

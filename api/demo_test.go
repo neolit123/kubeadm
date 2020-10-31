@@ -18,7 +18,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"testing"
 
 	"k8s.io/kubeadm/api/kubeadm"
@@ -78,25 +77,29 @@ var input = []byte(`
 `)
 
 func TestDemo(t *testing.T) {
+	if err := pkg.ValidateGroups(kubeadm.Groups); err != nil {
+		t.Fatal(err)
+	}
 	cv := pkg.NewConverter().WithGroups(kubeadm.Groups)
 
 	docs, err := pkg.SplitDocuments(input)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("len of docs:", len(docs))
+	if len(docs) != 4 {
+		t.Fatalf("expected %d documents, got %d", 4, len(docs))
+	}
 
 	for _, doc := range docs {
-
 		typemeta, err := cv.TypeMetaFromBytes(doc)
 		if err != nil {
 			t.Fatal(err)
 		}
+		t.Logf("processing %s", typemeta.String())
 		obj, err := cv.GetObjectFromBytes(typemeta, doc)
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("\n1--------%#v\n", obj)
 
 		if err := obj.Default(); err != nil {
 			t.Fatal(err)
@@ -115,19 +118,11 @@ func TestDemo(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("\n2-------- %#v\n", spec)
-
-		data, err := cv.Marshal(spec.Kinds[0])
-		if err != nil {
-			t.Fatal("marshal", err)
-		}
-		t.Logf("\n3-------- %s\n", data)
 
 		spec, err = cv.ConvertTo(spec, groups.GroupKubeadm, "v1beta2")
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("\n4-------- %#v\n", spec)
 
 		new, err := cv.Marshal(spec.Kinds[0])
 		if err != nil {
@@ -135,9 +130,7 @@ func TestDemo(t *testing.T) {
 		}
 
 		if !bytes.Equal(old, new) {
-			t.Fatal("could not roundtrip")
+			t.Fatalf("could not roundtrip: expected:\n%s\ngot:\n%s\n", old, new)
 		}
-
-		t.Logf("\n5-------- %s\n", new)
 	}
 }
