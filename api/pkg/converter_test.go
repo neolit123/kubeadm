@@ -17,7 +17,6 @@ limitations under the License.
 package pkg
 
 import (
-	"bytes"
 	"reflect"
 	"testing"
 
@@ -56,77 +55,6 @@ var (
 	testFooJSON = []byte(`{"kind": "testFoo", "apiVersion": "testgroup1/v1beta1", "A": "A"}`)
 	testZedJSON = []byte(`{"kind": "testZed", "apiVersion": "testgroup1/v1beta3", "a": "A", "b": "B", "c": "C"}`)
 )
-
-func TestValidateGroups(t *testing.T) {
-	testCases := []struct {
-		name          string
-		groups        []Group
-		expectedError bool
-	}{
-		{
-			name:          "valid: passes validation",
-			expectedError: false,
-			groups:        []Group{Group{Name: testGroup1, Versions: []VersionKinds{{Version: "v1beta1", Kinds: []Kind{&testFoo{}}}}}},
-		},
-		{
-			name:          "invalid: unknown group",
-			expectedError: true,
-			groups:        []Group{Group{Name: "foo", Versions: []VersionKinds{{Version: "v1beta1", Kinds: []Kind{&testFoo{}}}}}},
-		},
-		{
-			name:          "invalid: unknown version",
-			expectedError: true,
-			groups:        []Group{Group{Name: testGroup1, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{&testFoo{}}}}}},
-		},
-		{
-			name:          "invalid: empty groups",
-			expectedError: true,
-			groups:        []Group{},
-		},
-		{
-			name:          "invalid: empty group name",
-			expectedError: true,
-			groups:        []Group{Group{Name: "", Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{&testFoo{}}}}}},
-		},
-		{
-			name:          "invalid: empty version name",
-			expectedError: true,
-			groups:        []Group{Group{Name: testGroup1, Versions: []VersionKinds{{Version: "", Kinds: []Kind{&testFoo{}}}}}},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateGroups(tc.groups)
-			if (err != nil) != tc.expectedError {
-				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
-			}
-		})
-	}
-}
-
-func TestSplitDocuments(t *testing.T) {
-	foo := `{ "foo": "Foo" }`
-	bar := `{ "bar": "Bar" }`
-	multiDoc := foo + "\n---\n" + bar
-
-	docs, err := SplitDocuments([]byte(multiDoc))
-	if err != nil {
-		t.Fatalf("document split error: %v", err)
-	}
-	if len(docs) != 2 {
-		t.Fatalf("expected %d documents, got %d", 2, len(docs))
-	}
-
-	expectedFoo := []byte(foo + "\n")
-	if !bytes.Equal(docs[0], expectedFoo) {
-		t.Fatalf("expected first document:\n%v\ngot:\n%v", expectedFoo, docs[0])
-	}
-	expectedBar := []byte(bar + "\n")
-	if !bytes.Equal(docs[1], expectedBar) {
-		t.Fatalf("expected second document:\n%s\ngot:\n%s", expectedBar, docs[1])
-	}
-}
 
 func TestConvertBetweenGroups(t *testing.T) {
 	cv := NewConverter().WithGroups(testGroups)
