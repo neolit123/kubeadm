@@ -292,6 +292,21 @@ func (cv *Converter) Unmarshal(b []byte, k interface{}) error {
 	return cv.unmarshalFunc(b, k)
 }
 
+// DeleteMetadata ...
+func (cv *Converter) DeleteMetadata(in []byte) ([]byte, error) {
+	const errStr = "could not delete metadata"
+	u := map[string]interface{}{}
+	if err := cv.Unmarshal(in, &u); err != nil {
+		return nil, errors.Wrap(err, errStr)
+	}
+	delete(u, "metadata")
+	bytes, err := cv.Marshal(u)
+	if err != nil {
+		return nil, errors.Wrap(err, errStr)
+	}
+	return bytes, nil
+}
+
 // NewKindSpec ...
 func NewKindSpec() *KindSpec {
 	return &KindSpec{}

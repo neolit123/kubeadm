@@ -17,6 +17,7 @@ limitations under the License.
 package pkg
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -316,4 +317,17 @@ func (*testBaz) Default() error                  { return nil }
 func (x *testBaz) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
 func (*testBaz) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: testGroup2 + "/v1", Kind: "testBaz"}
+}
+
+func TestDeleteMetadata(t *testing.T) {
+	in := []byte(`{"foo":"a","bar":"b","metadata":{}}`)
+	cv := NewConverter()
+	out, err := cv.DeleteMetadata(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []byte(`{"bar":"b","foo":"a"}`)
+	if !bytes.Equal(expected, out) {
+		t.Fatalf("expected:\n%v\ngot:\n%v", expected, out)
+	}
 }
