@@ -25,7 +25,7 @@ import (
 func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	new := &InitConfiguration{}
-	cv.DeepCopy(new, ink)
+	pkg.DeepCopy(new, ink)
 	// restore from cache
 	cachedKind := cv.GetFromCache(new)
 	if cachedKind != nil {
@@ -42,7 +42,7 @@ func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg
 	ink := in.Kinds[0]
 	cv.AddToCache(ink)
 	new := &v1beta1.InitConfiguration{}
-	cv.DeepCopy(new, ink)
+	pkg.DeepCopy(new, ink)
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
@@ -62,7 +62,7 @@ func (*InitConfiguration) ConvertDownSpec() *pkg.KindSpec {
 func (*ClusterConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	new := &ClusterConfiguration{}
-	cv.DeepCopy(new, ink)
+	pkg.DeepCopy(new, ink)
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
@@ -70,7 +70,7 @@ func (*ClusterConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pk
 func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	new := &v1beta1.ClusterConfiguration{}
-	cv.DeepCopy(new, ink)
+	pkg.DeepCopy(new, ink)
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
@@ -89,14 +89,14 @@ func (*ClusterConfiguration) ConvertDownSpec() *pkg.KindSpec {
 // ConvertUp ...
 func (*ClusterStatus) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	new := &ClusterStatus{}
-	cv.DeepCopy(new, in.Kinds[0])
+	pkg.DeepCopy(new, in.Kinds[0])
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
 // ConvertDown ...
 func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	new := &v1beta1.ClusterStatus{}
-	cv.DeepCopy(new, in.Kinds[0])
+	pkg.DeepCopy(new, in.Kinds[0])
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
@@ -116,7 +116,7 @@ func (*ClusterStatus) ConvertDownSpec() *pkg.KindSpec {
 func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	new := &JoinConfiguration{}
-	cv.DeepCopy(new, ink)
+	pkg.DeepCopy(new, ink)
 	// restore from cache
 	cachedKind := cv.GetFromCache(new)
 	if cachedKind != nil {
@@ -132,7 +132,7 @@ func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg
 	ink := in.Kinds[0]
 	cv.AddToCache(ink)
 	new := &v1beta1.JoinConfiguration{}
-	cv.DeepCopy(new, ink)
+	pkg.DeepCopy(new, ink)
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 

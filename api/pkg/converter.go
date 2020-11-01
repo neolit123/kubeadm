@@ -64,7 +64,7 @@ func (cv *Converter) WithUnmarshalFunc(f func([]byte, interface{}) error) *Conve
 // AddToCache ...
 func (cv *Converter) AddToCache(kind Kind) {
 	key := kind.GetDefaultTypeMeta().String()
-	cv.cache[key] = cv.DeepCopy(nil, kind)
+	cv.cache[key] = DeepCopy(nil, kind)
 }
 
 // GetFromCache ...
@@ -74,7 +74,7 @@ func (cv *Converter) GetFromCache(kind Kind) Kind {
 	if !ok {
 		return nil
 	}
-	return cv.DeepCopy(nil, cached)
+	return DeepCopy(nil, cached)
 }
 
 // ClearCache ...
@@ -114,38 +114,13 @@ func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 				if gvk.Kind != k.GetDefaultTypeMeta().Kind {
 					continue
 				}
-				new := cv.NewObject(k)
-				cv.SetDefaultTypeMeta(new)
+				new := NewObject(k)
+				SetDefaultTypeMeta(new)
 				return new, nil
 			}
 		}
 	}
 	return nil, errors.Errorf("no object for %s", typemeta)
-}
-
-// NewObject ...
-func (cv *Converter) NewObject(kind Kind) Kind {
-	t := reflect.TypeOf(kind)
-	return (reflect.New(t.Elem()).Interface()).(Kind)
-}
-
-// DeepCopy ...
-func (cv *Converter) DeepCopy(dst Kind, src Kind) Kind {
-	if src == nil {
-		panic("nil value passed to DeepCopy")
-	}
-	bytes, err := cv.Marshal(src)
-	if err != nil {
-		panic("error marshal: " + err.Error())
-	}
-	if dst == nil {
-		dst = cv.NewObject(src)
-	}
-	if err := cv.Unmarshal(bytes, dst); err != nil {
-		panic("error unmarshal: " + err.Error())
-	}
-	cv.SetDefaultTypeMeta(dst)
-	return dst
 }
 
 // getGroup ...
@@ -299,12 +274,6 @@ func (cv *Converter) TypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error) {
 		return nil, errors.Wrap(err, "cannot get TypeMeta")
 	}
 	return typemeta, nil
-}
-
-// SetDefaultTypeMeta ...
-func (cv *Converter) SetDefaultTypeMeta(kind Kind) {
-	typemeta := kind.GetTypeMeta()
-	*typemeta = *kind.GetDefaultTypeMeta()
 }
 
 // Marshal ...

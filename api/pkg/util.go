@@ -19,6 +19,7 @@ package pkg
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"io"
 	"reflect"
 
@@ -112,4 +113,35 @@ func ValidateKindSpec(in *KindSpec) error {
 		}
 	}
 	return nil
+}
+
+// SetDefaultTypeMeta ...
+func SetDefaultTypeMeta(kind Kind) {
+	typemeta := kind.GetTypeMeta()
+	*typemeta = *kind.GetDefaultTypeMeta()
+}
+
+// NewObject ...
+func NewObject(kind Kind) Kind {
+	t := reflect.TypeOf(kind)
+	return (reflect.New(t.Elem()).Interface()).(Kind)
+}
+
+// DeepCopy ...
+func DeepCopy(dst Kind, src Kind) Kind {
+	if src == nil {
+		panic("nil value passed to DeepCopy")
+	}
+	bytes, err := json.Marshal(src)
+	if err != nil {
+		panic("error marshal: " + err.Error())
+	}
+	if dst == nil {
+		dst = NewObject(src)
+	}
+	if err := json.Unmarshal(bytes, dst); err != nil {
+		panic("error unmarshal: " + err.Error())
+	}
+	SetDefaultTypeMeta(dst)
+	return dst
 }

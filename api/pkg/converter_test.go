@@ -125,7 +125,7 @@ func TestConvert(t *testing.T) {
 	}
 
 	expectedFoo := &testFoo{A: "A"}
-	cv.SetDefaultTypeMeta(Kind(expectedFoo))
+	SetDefaultTypeMeta(Kind(expectedFoo))
 	if !reflect.DeepEqual(cs.Kinds[0], expectedFoo) {
 		t.Fatalf("expected oldest:\n%#v\ngot:\n%#v", expectedFoo, cs.Kinds[0])
 	}
@@ -169,14 +169,14 @@ type testFoo struct {
 func (*testFoo) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	que := in.Kinds[0]
 	foo := &testFoo{}
-	cv.SetDefaultTypeMeta(foo)
+	SetDefaultTypeMeta(foo)
 	foo.A = que.(*testQue).M
 	return NewKindSpec().WithKinds(foo), nil
 }
 func (*testFoo) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	foo := in.Kinds[0]
 	que := &testQue{}
-	cv.SetDefaultTypeMeta(que)
+	SetDefaultTypeMeta(que)
 	que.M = foo.(*testFoo).A
 	return NewKindSpec().WithKinds(que), nil
 }
@@ -199,7 +199,7 @@ func (*testBar1) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	foo := in.Kinds[0]
 	bar1 := &testBar1{}
 	bar2 := &testBar2{}
-	cv.DeepCopy(bar1, foo)
+	DeepCopy(bar1, foo)
 	cachedKind := cv.GetFromCache(bar2)
 	if cachedKind != nil {
 		cached := cachedKind.(*testBar2)
@@ -212,7 +212,7 @@ func (*testBar1) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	bar2 := in.Kinds[1]
 	cv.AddToCache(bar2)
 	foo := &testFoo{}
-	cv.DeepCopy(foo, bar1)
+	DeepCopy(foo, bar1)
 	return NewKindSpec().WithKinds(foo), nil
 }
 func (*testBar1) ConvertUpSpec() *KindSpec { return NewKindSpec().WithKinds(&testFoo{}) }
@@ -255,8 +255,8 @@ func (*testZed) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	bar1 := in.Kinds[0]
 	bar2 := in.Kinds[1]
 	zed := &testZed{}
-	cv.DeepCopy(zed, bar1)
-	cv.DeepCopy(zed, bar2)
+	DeepCopy(zed, bar1)
+	DeepCopy(zed, bar2)
 	cachedKind := cv.GetFromCache(zed)
 	if cachedKind != nil {
 		cached := cachedKind.(*testZed)
@@ -269,8 +269,8 @@ func (*testZed) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	cv.AddToCache(zed)
 	bar1 := &testBar1{}
 	bar2 := &testBar2{}
-	cv.DeepCopy(bar1, zed)
-	cv.DeepCopy(bar2, zed)
+	DeepCopy(bar1, zed)
+	DeepCopy(bar2, zed)
 	return NewKindSpec().WithKinds(bar1, bar2), nil
 }
 func (*testZed) ConvertUpSpec() *KindSpec        { return NewKindSpec().WithKinds(&testBar1{}, &testBar2{}) }
@@ -294,7 +294,7 @@ type testBaz struct {
 func (*testBaz) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	zed := in.Kinds[0]
 	baz := &testBaz{}
-	cv.DeepCopy(baz, zed)
+	DeepCopy(baz, zed)
 	cachedKind := cv.GetFromCache(baz)
 	if cachedKind != nil {
 		cached := cachedKind.(*testBaz)
@@ -306,7 +306,7 @@ func (*testBaz) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	baz := in.Kinds[0]
 	cv.AddToCache(baz)
 	zed := &testZed{}
-	cv.DeepCopy(zed, baz)
+	DeepCopy(zed, baz)
 	return NewKindSpec().WithKinds(zed), nil
 }
 func (*testBaz) ConvertUpSpec() *KindSpec        { return NewKindSpec().WithKinds(&testZed{}) }
