@@ -152,11 +152,10 @@ func (*testQue) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 func (*testQue) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	return in, nil
 }
-func (*testQue) ConvertUpSpec() *KindSpec        { return NewKindSpec().WithKinds(&testQue{}) }
-func (*testQue) ConvertDownSpec() *KindSpec      { return NewKindSpec().WithKinds(&testQue{}) }
-func (*testQue) Validate() error                 { return nil }
-func (*testQue) Default() error                  { return nil }
-func (x *testQue) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
+func (*testQue) ConvertUpSpec() *KindSpec   { return NewKindSpec().WithKinds(&testQue{}) }
+func (*testQue) ConvertDownSpec() *KindSpec { return NewKindSpec().WithKinds(&testQue{}) }
+func (*testQue) Validate() error            { return nil }
+func (*testQue) Default() error             { return nil }
 func (*testQue) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: testGroup0 + "/v1", Kind: "testQue"}
 }
@@ -181,11 +180,10 @@ func (*testFoo) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	que.M = foo.(*testFoo).A
 	return NewKindSpec().WithKinds(que), nil
 }
-func (*testFoo) ConvertUpSpec() *KindSpec        { return NewKindSpec().WithKinds(&testQue{}) }
-func (*testFoo) ConvertDownSpec() *KindSpec      { return NewKindSpec().WithKinds(&testFoo{}) }
-func (*testFoo) Validate() error                 { return nil }
-func (*testFoo) Default() error                  { return nil }
-func (x *testFoo) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
+func (*testFoo) ConvertUpSpec() *KindSpec   { return NewKindSpec().WithKinds(&testQue{}) }
+func (*testFoo) ConvertDownSpec() *KindSpec { return NewKindSpec().WithKinds(&testFoo{}) }
+func (*testFoo) Validate() error            { return nil }
+func (*testFoo) Default() error             { return nil }
 func (*testFoo) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: testGroup1 + "/v1beta1", Kind: "testFoo"}
 }
@@ -220,9 +218,8 @@ func (*testBar1) ConvertUpSpec() *KindSpec { return NewKindSpec().WithKinds(&tes
 func (*testBar1) ConvertDownSpec() *KindSpec {
 	return NewKindSpec().WithKinds(&testBar1{}, &testBar2{})
 }
-func (*testBar1) Validate() error                 { return nil }
-func (*testBar1) Default() error                  { return nil }
-func (x *testBar1) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
+func (*testBar1) Validate() error { return nil }
+func (*testBar1) Default() error  { return nil }
 func (*testBar1) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: testGroup1 + "/v1beta2", Kind: "testBar1"}
 }
@@ -239,7 +236,6 @@ func (*testBar2) ConvertUpSpec() *KindSpec                                   { r
 func (*testBar2) ConvertDownSpec() *KindSpec                                 { return NewKindSpec().WithKinds(&testBar2{}) }
 func (*testBar2) Validate() error                                            { return nil }
 func (*testBar2) Default() error                                             { return nil }
-func (x *testBar2) GetTypeMeta() *metav1.TypeMeta                            { return &x.TypeMeta }
 func (*testBar2) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: testGroup1 + "/v1beta2", Kind: "testBar2"}
 }
@@ -274,11 +270,10 @@ func (*testZed) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	DeepCopy(bar2, zed)
 	return NewKindSpec().WithKinds(bar1, bar2), nil
 }
-func (*testZed) ConvertUpSpec() *KindSpec        { return NewKindSpec().WithKinds(&testBar1{}, &testBar2{}) }
-func (*testZed) ConvertDownSpec() *KindSpec      { return NewKindSpec().WithKinds(&testZed{}) }
-func (*testZed) Validate() error                 { return nil }
-func (*testZed) Default() error                  { return nil }
-func (x *testZed) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
+func (*testZed) ConvertUpSpec() *KindSpec   { return NewKindSpec().WithKinds(&testBar1{}, &testBar2{}) }
+func (*testZed) ConvertDownSpec() *KindSpec { return NewKindSpec().WithKinds(&testZed{}) }
+func (*testZed) Validate() error            { return nil }
+func (*testZed) Default() error             { return nil }
 func (*testZed) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: testGroup1 + "/v1beta3", Kind: "testZed"}
 }
@@ -310,11 +305,10 @@ func (*testBaz) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	DeepCopy(zed, baz)
 	return NewKindSpec().WithKinds(zed), nil
 }
-func (*testBaz) ConvertUpSpec() *KindSpec        { return NewKindSpec().WithKinds(&testZed{}) }
-func (*testBaz) ConvertDownSpec() *KindSpec      { return NewKindSpec().WithKinds(&testBaz{}) }
-func (*testBaz) Validate() error                 { return nil }
-func (*testBaz) Default() error                  { return nil }
-func (x *testBaz) GetTypeMeta() *metav1.TypeMeta { return &x.TypeMeta }
+func (*testBaz) ConvertUpSpec() *KindSpec   { return NewKindSpec().WithKinds(&testZed{}) }
+func (*testBaz) ConvertDownSpec() *KindSpec { return NewKindSpec().WithKinds(&testBaz{}) }
+func (*testBaz) Validate() error            { return nil }
+func (*testBaz) Default() error             { return nil }
 func (*testBaz) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: testGroup2 + "/v1", Kind: "testBaz"}
 }

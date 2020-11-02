@@ -71,6 +71,9 @@ func ValidateGroups(groups []Group) error {
 			}
 			for _, k := range vk.Kinds {
 				t := reflect.TypeOf(k)
+				if _, err := getTypeMeta(k); err != nil {
+					return errors.Wrapf(err, "object %v does not embed %v", t, reflect.TypeOf(metav1.TypeMeta{}))
+				}
 				gvk := k.GetDefaultTypeMeta().GroupVersionKind()
 				if gvk.Group != g.Name {
 					return errors.Errorf("expected group for object %v: %q, got: %q", t, g.Name, gvk.Group)
@@ -100,6 +103,9 @@ func ValidateKindSpec(in *KindSpec) error {
 	}
 	var groupVersion string
 	for i, k := range in.Kinds {
+		if _, err := getTypeMeta(k); err != nil {
+			return errors.Wrapf(err, "object at position %d does not embed %v", i, reflect.TypeOf(metav1.TypeMeta{}))
+		}
 		tm := k.GetDefaultTypeMeta()
 		if tm.APIVersion == "" {
 			return errors.Errorf("object with empty APIVersion at position %d", i)
@@ -120,7 +126,7 @@ func ValidateKindSpec(in *KindSpec) error {
 
 // SetDefaultTypeMeta ...
 func SetDefaultTypeMeta(kind Kind) {
-	typemeta := kind.GetTypeMeta()
+	typemeta, _ := getTypeMeta(kind)
 	*typemeta = *kind.GetDefaultTypeMeta()
 }
 
@@ -203,4 +209,30 @@ func typemetaFromString(str string) *metav1.TypeMeta {
 		return nil
 	}
 	return &metav1.TypeMeta{APIVersion: gvk[0], Kind: gvk[1]}
+}
+
+// getTypeMeta ...
+func getTypeMeta(object interface{}) (*metav1.TypeMeta, error) {
+	if object == nil {
+		return nil, errors.New("received nil object")
+	}
+	val := reflect.ValueOf(object)
+	if val.Kind() != reflect.Ptr {
+		return nil, errors.New("object is not a pointer")
+	}
+	elem := val.Elem()
+	if elem.Kind() != reflect.Struct {
+		return nil, errors.New("object is not a pointer to a struct")
+	}
+	name := "TypeMeta"
+	field := elem.FieldByName(name)
+	if !field.IsValid() {
+		return nil, errors.Errorf("missing or invalid field %q in object", name)
+	}
+	typemeta, ok := field.Addr().Interface().(*metav1.TypeMeta)
+	if !ok {
+		return nil, errors.Errorf("could not cast the address of field %q to %v",
+			name, reflect.TypeOf(&metav1.TypeMeta{}))
+	}
+	return typemeta, nil
 }

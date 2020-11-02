@@ -25,22 +25,12 @@ import (
 // Version ...
 const Version = "v1beta1"
 
-// GetTypeMeta ...
-func (x *InitConfiguration) GetTypeMeta() *metav1.TypeMeta {
-	return &x.TypeMeta
-}
-
 // GetDefaultTypeMeta ...
 func (*InitConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "InitConfiguration"}
 }
 
 // ---------------
-
-// GetTypeMeta ...
-func (x *ClusterConfiguration) GetTypeMeta() *metav1.TypeMeta {
-	return &x.TypeMeta
-}
 
 // GetDefaultTypeMeta ...
 func (*ClusterConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {
@@ -49,22 +39,12 @@ func (*ClusterConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {
 
 // ---------------
 
-// GetTypeMeta ...
-func (x *ClusterStatus) GetTypeMeta() *metav1.TypeMeta {
-	return &x.TypeMeta
-}
-
 // GetDefaultTypeMeta ...
 func (*ClusterStatus) GetDefaultTypeMeta() *metav1.TypeMeta {
 	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "ClusterStatus"}
 }
 
 // ---------------
-
-// GetTypeMeta ...
-func (x *JoinConfiguration) GetTypeMeta() *metav1.TypeMeta {
-	return &x.TypeMeta
-}
 
 // GetDefaultTypeMeta ...
 func (*JoinConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {

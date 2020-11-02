@@ -45,8 +45,6 @@ type Kind interface {
 	Validate() error
 	// Default must define the defaulting function for this Kind.
 	Default() error
-	// TypeMeta ...
-	GetTypeMeta() *metav1.TypeMeta
 	// GetDefaultTypeMeta ...
 	GetDefaultTypeMeta() *metav1.TypeMeta
 }

@@ -24,19 +24,30 @@ import (
 )
 
 type testKind struct {
+	metav1.TypeMeta
 	convertUpSpec   *KindSpec
 	convertDownSpec *KindSpec
-	typeMeta        *metav1.TypeMeta
 }
 
 func (*testKind) ConvertUp(*Converter, *KindSpec) (*KindSpec, error)   { return nil, nil }
 func (*testKind) ConvertDown(*Converter, *KindSpec) (*KindSpec, error) { return nil, nil }
 func (*testKind) Default() error                                       { return nil }
 func (*testKind) Validate() error                                      { return nil }
-func (*testKind) GetTypeMeta() *metav1.TypeMeta                        { return nil }
-func (t *testKind) GetDefaultTypeMeta() *metav1.TypeMeta               { return t.typeMeta }
+func (t *testKind) GetDefaultTypeMeta() *metav1.TypeMeta               { return &t.TypeMeta }
 func (t *testKind) ConvertUpSpec() *KindSpec                           { return t.convertUpSpec }
 func (t *testKind) ConvertDownSpec() *KindSpec                         { return t.convertDownSpec }
+
+type testKindWithoutTypeMeta struct{}
+
+func (*testKindWithoutTypeMeta) ConvertUp(*Converter, *KindSpec) (*KindSpec, error) { return nil, nil }
+func (*testKindWithoutTypeMeta) ConvertDown(*Converter, *KindSpec) (*KindSpec, error) {
+	return nil, nil
+}
+func (*testKindWithoutTypeMeta) Default() error                         { return nil }
+func (*testKindWithoutTypeMeta) Validate() error                        { return nil }
+func (t *testKindWithoutTypeMeta) GetDefaultTypeMeta() *metav1.TypeMeta { return nil }
+func (t *testKindWithoutTypeMeta) ConvertUpSpec() *KindSpec             { return nil }
+func (t *testKindWithoutTypeMeta) ConvertDownSpec() *KindSpec           { return nil }
 
 func TestValidateKindSpec(t *testing.T) {
 	testCases := []struct {
@@ -48,26 +59,33 @@ func TestValidateKindSpec(t *testing.T) {
 			name:          "valid: valid objects in spec",
 			expectedError: false,
 			spec: NewKindSpec().WithKinds(
-				&testKind{nil, nil, &metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"}},
-				&testKind{nil, nil, &metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k2"}},
+				&testKind{TypeMeta: metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"}},
+				&testKind{TypeMeta: metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k2"}},
 			),
 		},
 		{
 			name:          "invalid: object in spec has empty apiVersion",
 			expectedError: true,
-			spec:          NewKindSpec().WithKinds(&testKind{nil, nil, &metav1.TypeMeta{APIVersion: "", Kind: "bar"}}),
+			spec:          NewKindSpec().WithKinds(&testKind{TypeMeta: metav1.TypeMeta{APIVersion: "", Kind: "bar"}}),
 		},
 		{
 			name:          "invalid: object in spec has empty kind",
 			expectedError: true,
-			spec:          NewKindSpec().WithKinds(&testKind{nil, nil, &metav1.TypeMeta{APIVersion: "foo/bar", Kind: ""}}),
+			spec:          NewKindSpec().WithKinds(&testKind{TypeMeta: metav1.TypeMeta{APIVersion: "foo/bar", Kind: ""}}),
 		},
 		{
-			name:          "invalid: found objects with different versions",
+			name:          "invalid: objects with different versions",
 			expectedError: true,
 			spec: NewKindSpec().WithKinds(
-				&testKind{nil, nil, &metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"}},
-				&testKind{nil, nil, &metav1.TypeMeta{APIVersion: "foo/baz", Kind: "k2"}},
+				&testKind{TypeMeta: metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"}},
+				&testKind{TypeMeta: metav1.TypeMeta{APIVersion: "foo/baz", Kind: "k2"}},
+			),
+		},
+		{
+			name:          "invalid: kind does not embed typemeta",
+			expectedError: true,
+			spec: NewKindSpec().WithKinds(
+				&testKindWithoutTypeMeta{},
 			),
 		},
 	}
@@ -93,7 +111,9 @@ func TestValidateGroups(t *testing.T) {
 			expectedError: false,
 			groups: []Group{Group{Name: "foo", Versions: []VersionKinds{{Version: "bar", Kinds: []Kind{
 				&testKind{
-					&KindSpec{}, &KindSpec{}, &metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"},
+					TypeMeta:        metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"},
+					convertUpSpec:   &KindSpec{},
+					convertDownSpec: &KindSpec{},
 				},
 			}}}}},
 		},
@@ -102,7 +122,9 @@ func TestValidateGroups(t *testing.T) {
 			expectedError: true,
 			groups: []Group{Group{Name: "foo", Versions: []VersionKinds{{Version: "bar", Kinds: []Kind{
 				&testKind{
-					&KindSpec{}, &KindSpec{}, &metav1.TypeMeta{APIVersion: "unknown/bar", Kind: "k1"},
+					TypeMeta:        metav1.TypeMeta{APIVersion: "unknown/bar", Kind: "k1"},
+					convertUpSpec:   &KindSpec{},
+					convertDownSpec: &KindSpec{},
 				},
 			}}}}},
 		},
@@ -111,7 +133,9 @@ func TestValidateGroups(t *testing.T) {
 			expectedError: true,
 			groups: []Group{Group{Name: "foo", Versions: []VersionKinds{{Version: "bar", Kinds: []Kind{
 				&testKind{
-					&KindSpec{}, &KindSpec{}, &metav1.TypeMeta{APIVersion: "foo/unknown", Kind: "k1"},
+					TypeMeta:        metav1.TypeMeta{APIVersion: "foo/unknown", Kind: "k1"},
+					convertUpSpec:   &KindSpec{},
+					convertDownSpec: &KindSpec{},
 				},
 			}}}}},
 		},
@@ -133,24 +157,35 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object does not match parent group",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{&testKind{
-				nil, nil, &metav1.TypeMeta{APIVersion: testGroup1 + "/foo", Kind: "bar"},
-			}}}}}},
+			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{
+				&testKind{
+					TypeMeta: metav1.TypeMeta{APIVersion: testGroup1 + "/foo", Kind: "bar"},
+				},
+			}}}}},
 		},
 		{
 			name:          "invalid: object does not match parent version",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{&testKind{
-				nil, nil, &metav1.TypeMeta{APIVersion: testGroup0 + "/bar", Kind: "baz"},
-			}}}}}},
+			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{
+				&testKind{
+					TypeMeta: metav1.TypeMeta{APIVersion: testGroup0 + "/bar", Kind: "baz"},
+				},
+			}}}}},
 		},
 		{
 			name:          "invalid: object has empty kind",
 			expectedError: true,
 			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{
 				&testKind{
-					nil, nil, &metav1.TypeMeta{APIVersion: testGroup0 + "/foo", Kind: ""},
+					TypeMeta: metav1.TypeMeta{APIVersion: testGroup0 + "/foo", Kind: ""},
 				},
+			}}}}},
+		},
+		{
+			name:          "invalid: object does not embed typemeta",
+			expectedError: true,
+			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{
+				&testKindWithoutTypeMeta{},
 			}}}}},
 		},
 	}
@@ -185,5 +220,79 @@ func TestSplitDocuments(t *testing.T) {
 	expectedBar := []byte(bar + "\n")
 	if !bytes.Equal(docs[1], expectedBar) {
 		t.Fatalf("expected second document:\n%s\ngot:\n%s", expectedBar, docs[1])
+	}
+}
+
+func TestGetTypeMeta(t *testing.T) {
+	var (
+		someNonStruct      = "foo"
+		structWithTypeMeta = struct {
+			metav1.TypeMeta
+			foo string
+		}{
+			TypeMeta: metav1.TypeMeta{APIVersion: "foo/bar", Kind: "baz"},
+			foo:      "foo",
+		}
+		structWithoutTypeMeta = struct {
+			foo string
+		}{
+			foo: "foo",
+		}
+		structWithTypeMetaString = struct {
+			TypeMeta string
+		}{
+			TypeMeta: "foo",
+		}
+	)
+
+	testCases := []struct {
+		name             string
+		object           interface{}
+		expectedTypeMeta *metav1.TypeMeta
+		expectedError    bool
+	}{
+		{
+			name:             "valid: matching typemeta pointer",
+			object:           &structWithTypeMeta,
+			expectedError:    false,
+			expectedTypeMeta: &structWithTypeMeta.TypeMeta,
+		},
+		{
+			name:          "invalid: received nil",
+			object:        nil,
+			expectedError: true,
+		},
+		{
+			name:          "invalid: received non-pointer",
+			object:        structWithTypeMeta,
+			expectedError: true,
+		},
+		{
+			name:          "invalid: received non-struct object",
+			object:        &someNonStruct,
+			expectedError: true,
+		},
+		{
+			name:          "invalid: received struct without typemeta",
+			object:        &structWithoutTypeMeta,
+			expectedError: true,
+		},
+		{
+			name:          "invalid: typemeta field is wrong type",
+			object:        &structWithTypeMetaString,
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tm, err := getTypeMeta(tc.object)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
+			}
+			if tm != tc.expectedTypeMeta {
+				t.Fatalf("expected typemeta %#v(%p), got %#v(%p)", tc.expectedTypeMeta, tc.expectedTypeMeta, tm, tm)
+			}
+		})
 	}
 }
