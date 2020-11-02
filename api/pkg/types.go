@@ -22,6 +22,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// ConverterCacheAnnotation ...
+	ConverterCacheAnnotation = "clusterlifecycle.x-k8s.io/converter-cache"
+)
+
 // Kind respresents an interface that all API objects that support validation, defaulting
 // and conversion in a version package must implement.
 type Kind interface {

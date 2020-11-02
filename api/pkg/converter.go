@@ -18,9 +18,11 @@ package pkg
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -62,15 +64,15 @@ func (cv *Converter) WithUnmarshalFunc(f func([]byte, interface{}) error) *Conve
 }
 
 // AddToCache ...
-func (cv *Converter) AddToCache(kind Kind) {
-	key := kind.GetDefaultTypeMeta().String()
-	cv.cache[key] = DeepCopy(nil, kind)
+func (cv *Converter) AddToCache(kinds ...Kind) {
+	for _, kind := range kinds {
+		cv.cache[stringFromKind(kind)] = DeepCopy(nil, kind)
+	}
 }
 
 // GetFromCache ...
 func (cv *Converter) GetFromCache(kind Kind) Kind {
-	key := kind.GetDefaultTypeMeta().String()
-	cached, ok := cv.cache[key]
+	cached, ok := cv.cache[stringFromKind(kind)]
 	if !ok {
 		return nil
 	}
@@ -240,7 +242,8 @@ convert:
 			return in, nil
 		}
 	}
-	return nil, errors.Errorf("the converter did not reach %s/%s when %s for input %s: last matching spec: %s, last requested spec: %s, last called convert on: %v",
+	return nil, errors.Errorf("the converter did not reach %s/%s when %s for input %s: "+
+		"last matching spec: %s, last requested spec: %s, last called convert on: %v",
 		targetGroup, targetVersion, convertString, originalInput, lastSpec, in, reflect.TypeOf(lastKind))
 }
 
@@ -305,6 +308,83 @@ func (cv *Converter) DeleteMetadata(in []byte) ([]byte, error) {
 		return nil, errors.Wrap(err, errStr)
 	}
 	return bytes, nil
+}
+
+// GetAnnotations ...
+func (cv *Converter) GetAnnotations(in []byte) (map[string]string, error) {
+	u := map[string]interface{}{}
+	if err := cv.Unmarshal(in, &u); err != nil {
+		return nil, errors.Wrap(err, "error unmarshaling")
+	}
+	_, annotations, err := getMetadataAnnotations(u)
+	if err != nil {
+		return nil, err
+	}
+	return annotations, nil
+}
+
+// SetAnnotations ...
+func (cv *Converter) SetAnnotations(in []byte, annotations map[string]string) ([]byte, error) {
+	u := map[string]interface{}{}
+	if err := cv.Unmarshal(in, &u); err != nil {
+		return nil, errors.Wrap(err, "error unmarshaling")
+	}
+	metadata, _, _ := getMetadataAnnotations(u)
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
+	metadata["annotations"] = annotations
+	u["metadata"] = metadata
+	out, err := cv.Marshal(&u)
+	if err != nil {
+		return nil, errors.Wrap(err, "error marshaling")
+	}
+	return out, nil
+}
+
+// AddCacheToAnnotations ...
+func (cv *Converter) AddCacheToAnnotations(annotations map[string]string) error {
+	for k, v := range cv.cache {
+		key := fmt.Sprintf("%s.%s", ConverterCacheAnnotation, k)
+		bytes, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		annotations[key] = string(bytes)
+	}
+	return nil
+}
+
+// AddAnnotationsToCache ...
+func (cv *Converter) AddAnnotationsToCache(annotations map[string]string) error {
+	for k, v := range annotations {
+		if !strings.HasPrefix(k, ConverterCacheAnnotation+".") {
+			continue
+		}
+		typemeta, err := cv.TypeMetaFromBytes([]byte(v))
+		if err != nil {
+			return err
+		}
+		keyFromAnnotation := strings.TrimPrefix(k, ConverterCacheAnnotation+".")
+		// in case typemeta is not present in the serialized object attempt to use the annotation key
+		if len(typemeta.APIVersion) == 0 && len(typemeta.Kind) == 0 {
+			typemeta = typemetaFromString(keyFromAnnotation)
+			if typemeta == nil {
+				return errors.Errorf("cannot parse typemeta from annotation key %q", keyFromAnnotation)
+			}
+		}
+		kind, err := cv.GetObjectFromBytes(typemeta, []byte(v))
+		if err != nil {
+			return err
+		}
+		keyFromKind := stringFromKind(kind)
+		if keyFromKind != keyFromAnnotation {
+			return errors.Errorf("mismatch in annotation key for object %+v: found %q, expected %q",
+				typemeta, keyFromAnnotation, keyFromKind)
+		}
+		cv.cache[keyFromKind] = kind
+	}
+	return nil
 }
 
 // NewKindSpec ...

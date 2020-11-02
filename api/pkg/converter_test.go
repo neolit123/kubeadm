@@ -331,3 +331,218 @@ func TestDeleteMetadata(t *testing.T) {
 		t.Fatalf("expected:\n%v\ngot:\n%v", expected, out)
 	}
 }
+
+func TestGetAnnotations(t *testing.T) {
+	testCases := []struct {
+		name                string
+		input               []byte
+		expectedAnnotations map[string]string
+		expectedError       bool
+	}{
+		{
+			name:                "valid: return annotations",
+			input:               []byte(`{"foo":"bar","metadata":{"foo":"bar","annotations":{"a":"a","b":"b"}}}`),
+			expectedAnnotations: map[string]string{"a": "a", "b": "b"},
+			expectedError:       false,
+		},
+		{
+			name:                "valid: return empty annotations",
+			input:               []byte(`{"foo":"bar","metadata":{"annotations":{}}}`),
+			expectedAnnotations: map[string]string{},
+			expectedError:       false,
+		},
+		{
+			name:          "invalid: annotation value is non-string",
+			input:         []byte(`{"foo":"bar","metadata":{"annotations":{"a":1}}}`),
+			expectedError: true,
+		},
+		{
+			name:          "invalid: null metadata",
+			input:         []byte(`{"foo":"bar","metadata":null}`),
+			expectedError: true,
+		},
+		{
+			name:          "invalid: null annotations",
+			input:         []byte(`{"foo":"bar","metadata":{"annotations":null}}`),
+			expectedError: true,
+		},
+		{
+			name:          "invalid: missing metadata",
+			input:         []byte(`{"foo":"bar"}`),
+			expectedError: true,
+		},
+		{
+			name:          "invalid: missing annotations",
+			input:         []byte(`{"foo":"bar","metadata":{}}`),
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cv := NewConverter()
+			annotations, err := cv.GetAnnotations(tc.input)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
+			}
+			if err != nil {
+				return
+			}
+			if !reflect.DeepEqual(tc.expectedAnnotations, annotations) {
+				t.Fatalf("expected annotations:\n%+v\ngot:\n%+v", tc.expectedAnnotations, annotations)
+			}
+		})
+	}
+}
+
+func TestSetAnnotations(t *testing.T) {
+	testCases := []struct {
+		name           string
+		input          []byte
+		annotations    map[string]string
+		expectedOutput []byte
+		expectedError  bool
+	}{
+		{
+			name:           "valid: set annotations",
+			input:          []byte(`{"foo":"bar"}`),
+			annotations:    map[string]string{"a": "a", "b": "b"},
+			expectedOutput: []byte(`{"foo":"bar","metadata":{"annotations":{"a":"a","b":"b"}}}`),
+			expectedError:  false,
+		},
+		{
+			name:           "valid: set null annotations",
+			input:          []byte(`{"foo":"bar"}`),
+			annotations:    nil,
+			expectedOutput: []byte(`{"foo":"bar","metadata":{"annotations":null}}`),
+			expectedError:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cv := NewConverter()
+			output, err := cv.SetAnnotations(tc.input, tc.annotations)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
+			}
+			if err != nil {
+				return
+			}
+			if !bytes.Equal(tc.expectedOutput, output) {
+				t.Fatalf("expected output:\n%s\ngot:\n%s", tc.expectedOutput, output)
+			}
+		})
+	}
+}
+
+func TestAddCacheToAnnotations(t *testing.T) {
+	testCases := []struct {
+		name           string
+		annotations    map[string]string
+		kinds          []Kind
+		expectedOutput map[string]string
+		expectedError  bool
+	}{
+		{
+			name:        "valid: add kind as annotation",
+			annotations: map[string]string{"a": "a", "b": "b"},
+			kinds:       []Kind{&testFoo{A: "foo"}},
+			expectedOutput: map[string]string{"a": "a", "b": "b",
+				ConverterCacheAnnotation + ".testgroup1/v1beta1.testFoo": `{"kind":"testFoo","apiVersion":"testgroup1/v1beta1","a":"foo"}`},
+			expectedError: false,
+		},
+		{
+			name:           "valid: empty cache",
+			annotations:    map[string]string{"a": "a", "b": "b"},
+			kinds:          []Kind{},
+			expectedOutput: map[string]string{"a": "a", "b": "b"},
+			expectedError:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cv := NewConverter()
+			for _, k := range tc.kinds {
+				cv.AddToCache(k)
+			}
+			err := cv.AddCacheToAnnotations(tc.annotations)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
+			}
+			if err != nil {
+				return
+			}
+			if !reflect.DeepEqual(tc.expectedOutput, tc.annotations) {
+				t.Fatalf("expected output:\n%#v\ngot:\n%#v", tc.expectedOutput, tc.annotations)
+			}
+		})
+	}
+}
+
+func TestAddAnnotationsToCache(t *testing.T) {
+	testCases := []struct {
+		name          string
+		annotations   map[string]string
+		expectedCache map[string]Kind
+		expectedError bool
+	}{
+		{
+			name: "valid: add kind with typemeta from annotation to cache",
+			annotations: map[string]string{"a": "a", "b": "b",
+				ConverterCacheAnnotation + ".testgroup1/v1beta1.testFoo": `{"kind":"testFoo","apiVersion":"testgroup1/v1beta1","a":"foo"}`},
+			expectedCache: map[string]Kind{"testgroup1/v1beta1.testFoo": &testFoo{
+				A: "foo", TypeMeta: metav1.TypeMeta{APIVersion: "testgroup1/v1beta1", Kind: "testFoo"}}},
+			expectedError: false,
+		},
+		{
+			name: "valid: add kind without typemeta from annotation to cache",
+			annotations: map[string]string{"a": "a", "b": "b",
+				ConverterCacheAnnotation + ".testgroup1/v1beta1.testFoo": `{"a":"foo"}`},
+			expectedCache: map[string]Kind{"testgroup1/v1beta1.testFoo": &testFoo{
+				A: "foo", TypeMeta: metav1.TypeMeta{APIVersion: "testgroup1/v1beta1", Kind: "testFoo"}}},
+			expectedError: false,
+		},
+		{
+			name: "invalid: unknown kind with typemeta stored in annotation",
+			annotations: map[string]string{"a": "a", "b": "b",
+				ConverterCacheAnnotation + ".testgroup1/v1beta1.testFoo": `{"kind":"unknown","apiVersion":"testgroup1/v1beta1","a":"foo"}`},
+			expectedError: true,
+		},
+		{
+			name: "invalid: typemeta does not match annotation suffix",
+			annotations: map[string]string{"a": "a", "b": "b",
+				ConverterCacheAnnotation + ".testgroup1/v1beta1.unknown": `{"kind":"testFoo","apiVersion":"testgroup1/v1beta1","a":"foo"}`},
+			expectedError: true,
+		},
+		{
+			name: "invalid: missing typemeta and cannot parse annotation key",
+			annotations: map[string]string{"a": "a", "b": "b",
+				ConverterCacheAnnotation + ".foo": `{"a":"foo"}`},
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cv := NewConverter().WithGroups(testGroups)
+			err := cv.AddAnnotationsToCache(tc.annotations)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
+			}
+			if err != nil {
+				return
+			}
+			for k, v := range tc.expectedCache {
+				valCache, ok := cv.cache[k]
+				if !ok {
+					t.Fatalf("missing key %q in expected cache", k)
+				}
+				if !reflect.DeepEqual(v, valCache) {
+					t.Fatalf("expected output:\n%#v\ngot:\n%#v", v, valCache)
+				}
+			}
+		})
+	}
+}

@@ -20,11 +20,14 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"reflect"
+	"strings"
 
 	"github.com/pkg/errors"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -144,4 +147,60 @@ func DeepCopy(dst Kind, src Kind) Kind {
 	}
 	SetDefaultTypeMeta(dst)
 	return dst
+}
+
+// getMetadataAnnotations ...
+func getMetadataAnnotations(u map[string]interface{}) (map[string]interface{}, map[string]string, error) {
+	var metadata map[string]interface{}
+	var ok bool
+	for k, v := range u {
+		if k != "metadata" {
+			continue
+		}
+		if v == nil {
+			return nil, nil, errors.New("metadata is nil")
+		}
+		metadata, ok = v.(map[string]interface{})
+		if !ok {
+			return nil, nil, errors.New("could not cast metadata to map[string]interface{}")
+		}
+		for k, v := range metadata {
+			if k != "annotations" {
+				continue
+			}
+			if v == nil {
+				return nil, nil, errors.New("annotations is nil")
+			}
+			annotations := map[string]string{}
+			annotationsMap, ok := v.(map[string]interface{})
+			if !ok {
+				return nil, nil, errors.New("could not cast annotations to map[string]interface{}")
+			}
+			for k, v := range annotationsMap {
+				str, ok := v.(string)
+				if !ok {
+					return nil, nil, errors.Errorf("could not cast the value of annotation %s as string", k)
+				}
+				annotations[k] = str
+			}
+			return metadata, annotations, nil
+		}
+	}
+	if metadata == nil {
+		return nil, nil, errors.New("did not find metadata")
+	}
+	return nil, nil, errors.New("did not find annotations")
+}
+
+func stringFromKind(k Kind) string {
+	gvk := k.GetDefaultTypeMeta().GroupVersionKind()
+	return fmt.Sprintf("%s/%s.%s", gvk.Group, gvk.Version, gvk.Kind)
+}
+
+func typemetaFromString(str string) *metav1.TypeMeta {
+	gvk := strings.Split(str, ".")
+	if len(gvk) != 2 {
+		return nil
+	}
+	return &metav1.TypeMeta{APIVersion: gvk[0], Kind: gvk[1]}
 }
