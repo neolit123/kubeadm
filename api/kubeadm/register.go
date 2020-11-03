@@ -49,3 +49,25 @@ var Groups = []pkg.Group{
 		},
 	},
 }
+
+// ComponentVersionKinds ...
+var ComponentVersionKinds = []pkg.VersionKinds{
+	{
+		Version: "v1.13.0",
+		Kinds: []pkg.Kind{
+			&v1beta1.InitConfiguration{},
+			&v1beta1.ClusterConfiguration{},
+			&v1beta1.ClusterStatus{},
+			&v1beta1.JoinConfiguration{},
+		},
+	},
+	{
+		Version: "v1.15.0",
+		Kinds: []pkg.Kind{
+			&v1beta2.InitConfiguration{},
+			&v1beta2.ClusterConfiguration{},
+			&v1beta2.ClusterStatus{},
+			&v1beta2.JoinConfiguration{},
+		},
+	},
+}

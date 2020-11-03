@@ -18,9 +18,11 @@ package pkg
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilversion "k8s.io/apimachinery/pkg/util/version"
 )
 
 type testKind struct {
@@ -292,6 +294,128 @@ func TestGetTypeMeta(t *testing.T) {
 			}
 			if tm != tc.expectedTypeMeta {
 				t.Fatalf("expected typemeta %#v(%p), got %#v(%p)", tc.expectedTypeMeta, tc.expectedTypeMeta, tm, tm)
+			}
+		})
+	}
+}
+
+func TestGetKindsForComponentVersion(t *testing.T) {
+	testCases := []struct {
+		name          string
+		vk            []VersionKinds
+		ver           string
+		less          versionCompareFunc
+		expectedError bool
+		expectedKinds []Kind
+	}{
+		{
+			name: "valid: exact match",
+			vk: []VersionKinds{
+				{Version: "v1.16.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
+				}},
+				{Version: "v1.17.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
+				}},
+			},
+			ver:           "v1.16.0",
+			expectedKinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}}},
+		},
+		{
+			name: "valid: latest version",
+			vk: []VersionKinds{
+				{Version: "v1.16.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
+				}},
+				{Version: "v1.17.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}},
+				}},
+			},
+			ver:           "v1.18.0",
+			expectedKinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}}},
+		},
+		{
+			name: "valid: latest version (custom less function)",
+			vk: []VersionKinds{
+				{Version: "v1.16.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
+				}},
+				{Version: "v1.17.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}},
+				}},
+			},
+			less: func(a *utilversion.Version, b *utilversion.Version) bool {
+				return a.LessThan(b)
+			},
+			ver:           "v1.18.0",
+			expectedKinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}}},
+		},
+		{
+			name: "valid: version in between",
+			vk: []VersionKinds{
+				{Version: "v1.16.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}},
+				}},
+				{Version: "v1.18.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
+				}},
+			},
+			ver:           "v1.17.0",
+			expectedKinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}}},
+		},
+		{
+			name: "invalid: old version",
+			vk: []VersionKinds{
+				{Version: "v1.16.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
+				}},
+				{Version: "v1.17.0", Kinds: []Kind{
+					&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}},
+				}},
+			},
+			ver:           "v1.15.0",
+			expectedError: true,
+		},
+		{
+			name: "invalid: found non-semver version",
+			vk: []VersionKinds{
+				{Version: "foo", Kinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}}}},
+			},
+			ver:           "v1.15.0",
+			expectedError: true,
+		},
+		{
+			name:          "invalid: version with empty kinds",
+			vk:            []VersionKinds{{Version: "v1.16.0", Kinds: []Kind{}}},
+			ver:           "v1.17.0",
+			expectedError: true,
+		},
+		{
+			name:          "invalid: empty input",
+			vk:            []VersionKinds{},
+			ver:           "v1.16.0",
+			expectedError: true,
+		},
+		{
+			name:          "invalid: component version is not semver",
+			ver:           "foo",
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			kinds, err := GetKindsForComponentVersion(tc.vk, tc.ver, tc.less)
+			if (err != nil) != tc.expectedError {
+				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
+			}
+			if !reflect.DeepEqual(tc.expectedKinds, kinds) {
+				t.Fatalf("expected kinds %#v, got %#v", tc.expectedKinds, kinds)
 			}
 		})
 	}
