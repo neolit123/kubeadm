@@ -65,7 +65,7 @@ func ValidateGroups(groups []Group) error {
 		if len(g.Name) == 0 {
 			return errors.New("found an empty group name")
 		}
-		for i, vk := range g.Versions {
+		for i, vk := range g.VersionKinds {
 			if len(vk.Version) == 0 {
 				return errors.Errorf("group %q has a version with empty name at position %d", g.Name, i)
 			}

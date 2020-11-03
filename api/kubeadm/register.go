@@ -27,7 +27,7 @@ import (
 var Groups = []pkg.Group{
 	pkg.Group{
 		Name: groups.GroupKubeadm,
-		Versions: []pkg.VersionKinds{
+		VersionKinds: []pkg.VersionKinds{
 			{
 				Version: v1beta1.Version,
 				Kinds: []pkg.Kind{

@@ -57,8 +57,8 @@ type VersionKinds struct {
 
 // Group ...
 type Group struct {
-	Name     string
-	Versions []VersionKinds
+	Name         string
+	VersionKinds []VersionKinds
 }
 
 // Converter ...

@@ -108,7 +108,7 @@ func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 		if g.Name != gvk.Group {
 			continue
 		}
-		for _, vk := range g.Versions {
+		for _, vk := range g.VersionKinds {
 			if gvk.Version != vk.Version {
 				continue
 			}
@@ -165,7 +165,7 @@ func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) 
 	// flatten
 	kinds := []Kind{}
 	for _, g := range cv.groups {
-		for _, vk := range g.Versions {
+		for _, vk := range g.VersionKinds {
 			for _, k := range vk.Kinds {
 				kinds = append(kinds, k)
 			}
@@ -179,7 +179,7 @@ func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) 
 	} else {
 		sourceVersionIdx := -1
 		targetVersionIdx := -1
-		for i, v := range sourceGroupObj.Versions {
+		for i, v := range sourceGroupObj.VersionKinds {
 			if sourceGVK.Version == v.Version {
 				sourceVersionIdx = i
 			}
@@ -253,7 +253,7 @@ func (cv *Converter) ConvertToLatest(in *KindSpec, targetGroup string) (*KindSpe
 	if err != nil {
 		return nil, err
 	}
-	latest := g.Versions[len(g.Versions)-1]
+	latest := g.VersionKinds[len(g.VersionKinds)-1]
 	return cv.ConvertTo(in, targetGroup, latest.Version)
 }
 
@@ -263,7 +263,7 @@ func (cv *Converter) ConvertToOldest(in *KindSpec, targetGroup string) (*KindSpe
 	if err != nil {
 		return nil, err
 	}
-	oldest := g.Versions[0]
+	oldest := g.VersionKinds[0]
 	return cv.ConvertTo(in, targetGroup, oldest.Version)
 }
 

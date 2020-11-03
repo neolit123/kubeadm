@@ -34,13 +34,13 @@ var (
 	testGroups = []Group{
 		{
 			Name: testGroup0,
-			Versions: []VersionKinds{
+			VersionKinds: []VersionKinds{
 				{"v1", []Kind{&testQue{}}},
 			},
 		},
 		{
 			Name: testGroup1,
-			Versions: []VersionKinds{
+			VersionKinds: []VersionKinds{
 				{"v1beta1", []Kind{&testFoo{}}},
 				{"v1beta2", []Kind{&testBar1{}, &testBar2{}}},
 				{"v1beta3", []Kind{&testZed{}}},
@@ -48,7 +48,7 @@ var (
 		},
 		{
 			Name: testGroup2,
-			Versions: []VersionKinds{
+			VersionKinds: []VersionKinds{
 				{"v1", []Kind{&testBaz{}}},
 			},
 		},

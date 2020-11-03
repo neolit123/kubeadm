@@ -109,7 +109,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "valid: passes validation",
 			expectedError: false,
-			groups: []Group{Group{Name: "foo", Versions: []VersionKinds{{Version: "bar", Kinds: []Kind{
+			groups: []Group{Group{Name: "foo", VersionKinds: []VersionKinds{{Version: "bar", Kinds: []Kind{
 				&testKind{
 					TypeMeta:        metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"},
 					convertUpSpec:   &KindSpec{},
@@ -120,7 +120,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: unknown group",
 			expectedError: true,
-			groups: []Group{Group{Name: "foo", Versions: []VersionKinds{{Version: "bar", Kinds: []Kind{
+			groups: []Group{Group{Name: "foo", VersionKinds: []VersionKinds{{Version: "bar", Kinds: []Kind{
 				&testKind{
 					TypeMeta:        metav1.TypeMeta{APIVersion: "unknown/bar", Kind: "k1"},
 					convertUpSpec:   &KindSpec{},
@@ -131,7 +131,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: unknown version",
 			expectedError: true,
-			groups: []Group{Group{Name: "foo", Versions: []VersionKinds{{Version: "bar", Kinds: []Kind{
+			groups: []Group{Group{Name: "foo", VersionKinds: []VersionKinds{{Version: "bar", Kinds: []Kind{
 				&testKind{
 					TypeMeta:        metav1.TypeMeta{APIVersion: "foo/unknown", Kind: "k1"},
 					convertUpSpec:   &KindSpec{},
@@ -147,17 +147,17 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: empty group name",
 			expectedError: true,
-			groups:        []Group{Group{Name: "", Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{}}}}},
+			groups:        []Group{Group{Name: "", VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{}}}}},
 		},
 		{
 			name:          "invalid: empty version name",
 			expectedError: true,
-			groups:        []Group{Group{Name: "foo", Versions: []VersionKinds{{Version: "", Kinds: []Kind{}}}}},
+			groups:        []Group{Group{Name: "foo", VersionKinds: []VersionKinds{{Version: "", Kinds: []Kind{}}}}},
 		},
 		{
 			name:          "invalid: object does not match parent group",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Name: testGroup0, VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{
 				&testKind{
 					TypeMeta: metav1.TypeMeta{APIVersion: testGroup1 + "/foo", Kind: "bar"},
 				},
@@ -166,7 +166,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object does not match parent version",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Name: testGroup0, VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{
 				&testKind{
 					TypeMeta: metav1.TypeMeta{APIVersion: testGroup0 + "/bar", Kind: "baz"},
 				},
@@ -175,7 +175,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object has empty kind",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Name: testGroup0, VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{
 				&testKind{
 					TypeMeta: metav1.TypeMeta{APIVersion: testGroup0 + "/foo", Kind: ""},
 				},
@@ -184,7 +184,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object does not embed typemeta",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, Versions: []VersionKinds{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Name: testGroup0, VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{
 				&testKindWithoutTypeMeta{},
 			}}}}},
 		},
