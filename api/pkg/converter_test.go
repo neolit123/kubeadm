@@ -199,6 +199,7 @@ func (*testBar1) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	bar1 := &testBar1{}
 	bar2 := &testBar2{}
 	DeepCopy(bar1, foo)
+	SetDefaultTypeMeta(bar2)
 	cachedKind := cv.GetFromCache(bar2)
 	if cachedKind != nil {
 		cached := cachedKind.(*testBar2)
@@ -538,5 +539,58 @@ func TestAddAnnotationsToCache(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+var testDataWithAnnotationCache = []byte(`
+{
+	"kind":"testFoo",
+	"apiVersion":"testgroup1/v1beta1",
+	"a":"foo",
+	"metadata":{
+		"annotations":{
+			"` + ConverterCacheAnnotation + `.testgroup1/v1beta2.testBar2":"{\"kind\":\"testBar2\",\"apiVersion\":\"testgroup1/v1beta2\",\"b\":\"cached\"}"
+		}
+	}
+}`)
+
+func TestConvertUsingCache(t *testing.T) {
+	cv := NewConverter().WithGroups(testGroups)
+	annotations, err := cv.GetAnnotations(testDataWithAnnotationCache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cv.AddAnnotationsToCache(annotations); err != nil {
+		t.Fatal(err)
+	}
+	typemeta, err := cv.TypeMetaFromBytes(testDataWithAnnotationCache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	obj, err := cv.GetObjectFromBytes(typemeta, testDataWithAnnotationCache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec := NewKindSpec().WithKinds(obj)
+	spec, err = cv.ConvertTo(spec, "testgroup1", "v1beta2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.Kinds) != 2 {
+		t.Fatalf("expected Kinds in spec %d, got %d", 2, len(spec.Kinds))
+	}
+	bar1, err := cv.Marshal(spec.Kinds[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	bar2, err := cv.Marshal(spec.Kinds[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []byte(`{"kind":"testBar1","apiVersion":"testgroup1/v1beta2","a":"foo"}` +
+		"\n---\n" + `{"kind":"testBar2","apiVersion":"testgroup1/v1beta2","b":"cached"}`)
+	new := JoinDocuments(bar1, bar2)
+	if !bytes.Equal(expected, new) {
+		t.Fatalf("expected result:\n%s\ngot:\n%s", expected, new)
 	}
 }
