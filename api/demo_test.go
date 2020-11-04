@@ -96,7 +96,7 @@ func TestDemo(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("processing %s", typemeta.String())
-		obj, err := cv.GetObjectFromBytes(typemeta, doc)
+		obj, err := cv.KindFromBytes(typemeta, doc)
 		if err != nil {
 			t.Fatal(err)
 		}

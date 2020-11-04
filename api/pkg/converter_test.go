@@ -65,7 +65,7 @@ func TestConvertBetweenGroups(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	obj, err := cv.GetObjectFromBytes(typemeta, testZedJSON)
+	obj, err := cv.KindFromBytes(typemeta, testZedJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestConvertBetweenGroups(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	obj, err = cv.GetObjectFromBytes(typemeta, testFooJSON)
+	obj, err = cv.KindFromBytes(typemeta, testFooJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestConvert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	objOriginal, err := cv.GetObjectFromBytes(typemeta, testZedJSON)
+	objOriginal, err := cv.KindFromBytes(typemeta, testZedJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func (*testBar1) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	bar2 := &testBar2{}
 	DeepCopy(bar1, foo)
 	SetDefaultTypeMeta(bar2)
-	cachedKind := cv.GetFromCache(bar2)
+	cachedKind := cv.KindFromCache(bar2)
 	if cachedKind != nil {
 		cached := cachedKind.(*testBar2)
 		bar2.B = cached.B
@@ -210,7 +210,7 @@ func (*testBar1) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 func (*testBar1) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	bar1 := in.Kinds[0]
 	bar2 := in.Kinds[1]
-	cv.AddToCache(bar2)
+	cv.AddKindsToCache(bar2)
 	foo := &testFoo{}
 	DeepCopy(foo, bar1)
 	return NewKindSpec().WithKinds(foo), nil
@@ -255,7 +255,7 @@ func (*testZed) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	zed := &testZed{}
 	DeepCopy(zed, bar1)
 	DeepCopy(zed, bar2)
-	cachedKind := cv.GetFromCache(zed)
+	cachedKind := cv.KindFromCache(zed)
 	if cachedKind != nil {
 		cached := cachedKind.(*testZed)
 		zed.C = cached.C
@@ -264,7 +264,7 @@ func (*testZed) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 }
 func (*testZed) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	zed := in.Kinds[0]
-	cv.AddToCache(zed)
+	cv.AddKindsToCache(zed)
 	bar1 := &testBar1{}
 	bar2 := &testBar2{}
 	DeepCopy(bar1, zed)
@@ -292,7 +292,7 @@ func (*testBaz) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	zed := in.Kinds[0]
 	baz := &testBaz{}
 	DeepCopy(baz, zed)
-	cachedKind := cv.GetFromCache(baz)
+	cachedKind := cv.KindFromCache(baz)
 	if cachedKind != nil {
 		cached := cachedKind.(*testBaz)
 		baz.D = cached.D
@@ -301,7 +301,7 @@ func (*testBaz) ConvertUp(cv *Converter, in *KindSpec) (*KindSpec, error) {
 }
 func (*testBaz) ConvertDown(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	baz := in.Kinds[0]
-	cv.AddToCache(baz)
+	cv.AddKindsToCache(baz)
 	zed := &testZed{}
 	DeepCopy(zed, baz)
 	return NewKindSpec().WithKinds(zed), nil
@@ -460,7 +460,7 @@ func TestAddCacheToAnnotations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cv := NewConverter()
 			for _, k := range tc.kinds {
-				cv.AddToCache(k)
+				cv.AddKindsToCache(k)
 			}
 			err := cv.AddCacheToAnnotations(tc.annotations)
 			if (err != nil) != tc.expectedError {
@@ -567,7 +567,7 @@ func TestConvertUsingCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	obj, err := cv.GetObjectFromBytes(typemeta, testDataWithAnnotationCache)
+	obj, err := cv.KindFromBytes(typemeta, testDataWithAnnotationCache)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -51,6 +51,12 @@ func (cv *Converter) WithOutput(output io.Writer) *Converter {
 	return cv
 }
 
+// WithCache ...
+func (cv *Converter) WithCache(cache map[string]Kind) *Converter {
+	cv.cache = cache
+	return cv
+}
+
 // WithMarshalFunc ...
 func (cv *Converter) WithMarshalFunc(f func(interface{}) ([]byte, error)) *Converter {
 	cv.marshalFunc = f
@@ -63,16 +69,16 @@ func (cv *Converter) WithUnmarshalFunc(f func([]byte, interface{}) error) *Conve
 	return cv
 }
 
-// AddToCache ...
-func (cv *Converter) AddToCache(kinds ...Kind) {
+// AddKindsToCache ...
+func (cv *Converter) AddKindsToCache(kinds ...Kind) {
 	for _, kind := range kinds {
-		cv.cache[stringFromKind(kind)] = DeepCopy(nil, kind)
+		cv.cache[gvkStringFromKind(kind)] = DeepCopy(nil, kind)
 	}
 }
 
-// GetFromCache ...
-func (cv *Converter) GetFromCache(kind Kind) Kind {
-	cached, ok := cv.cache[stringFromKind(kind)]
+// KindFromCache ...
+func (cv *Converter) KindFromCache(kind Kind) Kind {
+	cached, ok := cv.cache[gvkStringFromKind(kind)]
 	if !ok {
 		return nil
 	}
@@ -86,9 +92,9 @@ func (cv *Converter) ClearCache() {
 	}
 }
 
-// GetObjectFromBytes ...
-func (cv *Converter) GetObjectFromBytes(typemeta *metav1.TypeMeta, input []byte) (Kind, error) {
-	kind, err := cv.GetObject(typemeta)
+// KindFromBytes ...
+func (cv *Converter) KindFromBytes(typemeta *metav1.TypeMeta, input []byte) (Kind, error) {
+	kind, err := cv.NewKind(typemeta)
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +107,8 @@ func (cv *Converter) GetObjectFromBytes(typemeta *metav1.TypeMeta, input []byte)
 	return kind, nil
 }
 
-// GetObject ...
-func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
+// NewKind ...
+func (cv *Converter) NewKind(typemeta *metav1.TypeMeta) (Kind, error) {
 	gvk := typemeta.GroupVersionKind()
 	for _, g := range cv.groups {
 		if g.Name != gvk.Group {
@@ -116,7 +122,7 @@ func (cv *Converter) GetObject(typemeta *metav1.TypeMeta) (Kind, error) {
 				if gvk.Kind != k.GetDefaultTypeMeta().Kind {
 					continue
 				}
-				new := NewObject(k)
+				new := newKindInstance(k)
 				SetDefaultTypeMeta(new)
 				return new, nil
 			}
@@ -270,10 +276,7 @@ func (cv *Converter) ConvertToOldest(in *KindSpec, targetGroup string) (*KindSpe
 // TypeMetaFromBytes ...
 func (cv *Converter) TypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error) {
 	typemeta := &metav1.TypeMeta{}
-	if cv.unmarshalFunc == nil {
-		return nil, errors.New("unmarshal function not set")
-	}
-	if err := cv.unmarshalFunc(input, typemeta); err != nil {
+	if err := cv.Unmarshal(input, typemeta); err != nil {
 		return nil, errors.Wrap(err, "cannot get TypeMeta")
 	}
 	return typemeta, nil
@@ -368,16 +371,16 @@ func (cv *Converter) AddAnnotationsToCache(annotations map[string]string) error 
 		keyFromAnnotation := strings.TrimPrefix(k, ConverterCacheAnnotation+".")
 		// in case typemeta is not present in the serialized object attempt to use the annotation key
 		if len(typemeta.APIVersion) == 0 && len(typemeta.Kind) == 0 {
-			typemeta = typemetaFromString(keyFromAnnotation)
+			typemeta = typemetaFromGVKString(keyFromAnnotation)
 			if typemeta == nil {
 				return errors.Errorf("cannot parse typemeta from annotation key %q", keyFromAnnotation)
 			}
 		}
-		kind, err := cv.GetObjectFromBytes(typemeta, []byte(v))
+		kind, err := cv.KindFromBytes(typemeta, []byte(v))
 		if err != nil {
 			return err
 		}
-		keyFromKind := stringFromKind(kind)
+		keyFromKind := gvkStringFromKind(kind)
 		if keyFromKind != keyFromAnnotation {
 			return errors.Errorf("mismatch in annotation key for object %+v: found %q, expected %q",
 				typemeta, keyFromAnnotation, keyFromKind)

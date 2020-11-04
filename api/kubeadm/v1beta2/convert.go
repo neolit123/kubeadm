@@ -27,7 +27,7 @@ func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.K
 	new := &InitConfiguration{}
 	pkg.DeepCopy(new, ink)
 	// restore from cache
-	cachedKind := cv.GetFromCache(new)
+	cachedKind := cv.KindFromCache(new)
 	if cachedKind != nil {
 		cached := cachedKind.(*InitConfiguration)
 		new.CertificateKey = cached.CertificateKey
@@ -40,7 +40,7 @@ func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.K
 // ConvertDown ...
 func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
-	cv.AddToCache(ink)
+	cv.AddKindsToCache(ink)
 	new := &v1beta1.InitConfiguration{}
 	pkg.DeepCopy(new, ink)
 	return pkg.NewKindSpec().WithKinds(new), nil
@@ -118,7 +118,7 @@ func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.K
 	new := &JoinConfiguration{}
 	pkg.DeepCopy(new, ink)
 	// restore from cache
-	cachedKind := cv.GetFromCache(new)
+	cachedKind := cv.KindFromCache(new)
 	if cachedKind != nil {
 		cached := cachedKind.(*JoinConfiguration)
 		new.NodeRegistration.IgnorePreflightErrors = make([]string, len(cached.NodeRegistration.IgnorePreflightErrors))
@@ -130,7 +130,7 @@ func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.K
 // ConvertDown ...
 func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
-	cv.AddToCache(ink)
+	cv.AddKindsToCache(ink)
 	new := &v1beta1.JoinConfiguration{}
 	pkg.DeepCopy(new, ink)
 	return pkg.NewKindSpec().WithKinds(new), nil

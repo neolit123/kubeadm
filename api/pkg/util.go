@@ -128,11 +128,14 @@ func ValidateKindSpec(in *KindSpec) error {
 // SetDefaultTypeMeta ...
 func SetDefaultTypeMeta(kind Kind) {
 	typemeta, _ := getTypeMeta(kind)
+	if typemeta == nil {
+		return
+	}
 	*typemeta = *kind.GetDefaultTypeMeta()
 }
 
-// NewObject ...
-func NewObject(kind Kind) Kind {
+// newKindInstance ...
+func newKindInstance(kind Kind) Kind {
 	t := reflect.TypeOf(kind)
 	return (reflect.New(t.Elem()).Interface()).(Kind)
 }
@@ -147,7 +150,7 @@ func DeepCopy(dst Kind, src Kind) Kind {
 		panic("error marshal: " + err.Error())
 	}
 	if dst == nil {
-		dst = NewObject(src)
+		dst = newKindInstance(src)
 	}
 	if err := json.Unmarshal(bytes, dst); err != nil {
 		panic("error unmarshal: " + err.Error())
@@ -199,12 +202,12 @@ func getMetadataAnnotations(u map[string]interface{}) (map[string]interface{}, m
 	return nil, nil, errors.New("did not find annotations")
 }
 
-func stringFromKind(k Kind) string {
+func gvkStringFromKind(k Kind) string {
 	gvk := k.GetDefaultTypeMeta().GroupVersionKind()
 	return fmt.Sprintf("%s/%s.%s", gvk.Group, gvk.Version, gvk.Kind)
 }
 
-func typemetaFromString(str string) *metav1.TypeMeta {
+func typemetaFromGVKString(str string) *metav1.TypeMeta {
 	gvk := strings.Split(str, ".")
 	if len(gvk) != 2 {
 		return nil
