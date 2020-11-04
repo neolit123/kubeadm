@@ -53,7 +53,7 @@ func SplitDocuments(b []byte) ([][]byte, error) {
 }
 
 // JoinDocuments ...
-func JoinDocuments(docs [][]byte) []byte {
+func JoinDocuments(docs ...[]byte) []byte {
 	return bytes.Join(docs, []byte("\n---\n"))
 }
 
