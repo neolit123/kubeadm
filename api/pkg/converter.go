@@ -92,23 +92,20 @@ func (cv *Converter) ClearCache() {
 	}
 }
 
-// KindFromBytes ...
-func (cv *Converter) KindFromBytes(typemeta *metav1.TypeMeta, input []byte) (Kind, error) {
-	kind, err := cv.NewKind(typemeta)
+// ReadKind ...
+func (cv *Converter) ReadKind(typemeta *metav1.TypeMeta, input []byte) (Kind, error) {
+	kind, err := cv.NewKindInstance(typemeta)
 	if err != nil {
 		return nil, err
 	}
-	if cv.unmarshalFunc == nil {
-		return nil, errors.New("unmarshal function not set")
-	}
-	if err := cv.unmarshalFunc(input, kind); err != nil {
+	if err := cv.Unmarshal(input, kind); err != nil {
 		return nil, err
 	}
 	return kind, nil
 }
 
-// NewKind ...
-func (cv *Converter) NewKind(typemeta *metav1.TypeMeta) (Kind, error) {
+// NewKindInstance ...
+func (cv *Converter) NewKindInstance(typemeta *metav1.TypeMeta) (Kind, error) {
 	gvk := typemeta.GroupVersionKind()
 	for _, g := range cv.groups {
 		if g.Name != gvk.Group {
@@ -273,8 +270,8 @@ func (cv *Converter) ConvertToOldest(in *KindSpec, targetGroup string) (*KindSpe
 	return cv.ConvertTo(in, targetGroup, oldest.Version)
 }
 
-// TypeMetaFromBytes ...
-func (cv *Converter) TypeMetaFromBytes(input []byte) (*metav1.TypeMeta, error) {
+// ReadTypeMeta ...
+func (cv *Converter) ReadTypeMeta(input []byte) (*metav1.TypeMeta, error) {
 	typemeta := &metav1.TypeMeta{}
 	if err := cv.Unmarshal(input, typemeta); err != nil {
 		return nil, errors.Wrap(err, "cannot get TypeMeta")
@@ -313,8 +310,8 @@ func (cv *Converter) DeleteMetadata(in []byte) ([]byte, error) {
 	return bytes, nil
 }
 
-// GetAnnotations ...
-func (cv *Converter) GetAnnotations(in []byte) (map[string]string, error) {
+// ReadAnnotations ...
+func (cv *Converter) ReadAnnotations(in []byte) (map[string]string, error) {
 	u := map[string]interface{}{}
 	if err := cv.Unmarshal(in, &u); err != nil {
 		return nil, errors.Wrap(err, "error unmarshaling")
@@ -364,7 +361,7 @@ func (cv *Converter) AddAnnotationsToCache(annotations map[string]string) error 
 		if !strings.HasPrefix(k, ConverterCacheAnnotation+".") {
 			continue
 		}
-		typemeta, err := cv.TypeMetaFromBytes([]byte(v))
+		typemeta, err := cv.ReadTypeMeta([]byte(v))
 		if err != nil {
 			return err
 		}
@@ -376,7 +373,7 @@ func (cv *Converter) AddAnnotationsToCache(annotations map[string]string) error 
 				return errors.Errorf("cannot parse typemeta from annotation key %q", keyFromAnnotation)
 			}
 		}
-		kind, err := cv.KindFromBytes(typemeta, []byte(v))
+		kind, err := cv.ReadKind(typemeta, []byte(v))
 		if err != nil {
 			return err
 		}

@@ -91,12 +91,12 @@ func TestDemo(t *testing.T) {
 	}
 
 	for _, doc := range docs {
-		typemeta, err := cv.TypeMetaFromBytes(doc)
+		typemeta, err := cv.ReadTypeMeta(doc)
 		if err != nil {
 			t.Fatal(err)
 		}
 		t.Logf("processing %s", typemeta.String())
-		obj, err := cv.KindFromBytes(typemeta, doc)
+		obj, err := cv.ReadKind(typemeta, doc)
 		if err != nil {
 			t.Fatal(err)
 		}

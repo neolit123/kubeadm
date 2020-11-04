@@ -61,11 +61,11 @@ func TestConvertBetweenGroups(t *testing.T) {
 	cv := NewConverter().WithGroups(testGroups)
 
 	// convert from older to newer group
-	typemeta, err := cv.TypeMetaFromBytes(testZedJSON)
+	typemeta, err := cv.ReadTypeMeta(testZedJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obj, err := cv.KindFromBytes(typemeta, testZedJSON)
+	obj, err := cv.ReadKind(typemeta, testZedJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,11 +84,11 @@ func TestConvertBetweenGroups(t *testing.T) {
 	}
 
 	// convert from newer to older group
-	typemeta, err = cv.TypeMetaFromBytes(testFooJSON)
+	typemeta, err = cv.ReadTypeMeta(testFooJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obj, err = cv.KindFromBytes(typemeta, testFooJSON)
+	obj, err = cv.ReadKind(typemeta, testFooJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,11 +110,11 @@ func TestConvertBetweenGroups(t *testing.T) {
 func TestConvert(t *testing.T) {
 	cv := NewConverter().WithGroups(testGroups)
 
-	typemeta, err := cv.TypeMetaFromBytes(testZedJSON)
+	typemeta, err := cv.ReadTypeMeta(testZedJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
-	objOriginal, err := cv.KindFromBytes(typemeta, testZedJSON)
+	objOriginal, err := cv.ReadKind(typemeta, testZedJSON)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,7 +327,7 @@ func TestDeleteMetadata(t *testing.T) {
 	}
 }
 
-func TestGetAnnotations(t *testing.T) {
+func TestReadAnnotations(t *testing.T) {
 	testCases := []struct {
 		name                string
 		input               []byte
@@ -376,7 +376,7 @@ func TestGetAnnotations(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cv := NewConverter()
-			annotations, err := cv.GetAnnotations(tc.input)
+			annotations, err := cv.ReadAnnotations(tc.input)
 			if (err != nil) != tc.expectedError {
 				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
 			}
@@ -556,18 +556,18 @@ var testDataWithAnnotationCache = []byte(`
 
 func TestConvertUsingCache(t *testing.T) {
 	cv := NewConverter().WithGroups(testGroups)
-	annotations, err := cv.GetAnnotations(testDataWithAnnotationCache)
+	annotations, err := cv.ReadAnnotations(testDataWithAnnotationCache)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := cv.AddAnnotationsToCache(annotations); err != nil {
 		t.Fatal(err)
 	}
-	typemeta, err := cv.TypeMetaFromBytes(testDataWithAnnotationCache)
+	typemeta, err := cv.ReadTypeMeta(testDataWithAnnotationCache)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obj, err := cv.KindFromBytes(typemeta, testDataWithAnnotationCache)
+	obj, err := cv.ReadKind(typemeta, testDataWithAnnotationCache)
 	if err != nil {
 		t.Fatal(err)
 	}
