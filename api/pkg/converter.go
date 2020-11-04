@@ -94,6 +94,13 @@ func (cv *Converter) ClearCache() {
 
 // ReadKind ...
 func (cv *Converter) ReadKind(typemeta *metav1.TypeMeta, input []byte) (Kind, error) {
+	var err error
+	if typemeta == nil {
+		typemeta, err = cv.ReadTypeMeta(input)
+		if err != nil {
+			return nil, err
+		}
+	}
 	kind, err := cv.NewKindInstance(typemeta)
 	if err != nil {
 		return nil, err

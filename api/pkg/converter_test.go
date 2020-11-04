@@ -57,6 +57,19 @@ var (
 	testZedJSON = []byte(`{"kind": "testZed", "apiVersion": "testgroup1/v1beta3", "a": "A", "b": "B", "c": "C"}`)
 )
 
+func TestReadKind(t *testing.T) {
+	cv := NewConverter().WithGroups(testGroups)
+	kind, err := cv.ReadKind(nil, testZedJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const expected = "&TypeMeta{Kind:testZed,APIVersion:testgroup1/v1beta3,}"
+	new := kind.GetDefaultTypeMeta().String()
+	if new != expected {
+		t.Fatalf("expected typmeta: %s, got %s", expected, new)
+	}
+}
+
 func TestConvertBetweenGroups(t *testing.T) {
 	cv := NewConverter().WithGroups(testGroups)
 
