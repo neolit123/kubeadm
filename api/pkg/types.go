@@ -49,16 +49,21 @@ type Kind interface {
 	GetDefaultTypeMeta() *metav1.TypeMeta
 }
 
-// VersionKinds can be used to map Kinds to a version.
-type VersionKinds struct {
-	Version string
-	Kinds   []Kind
+// Version can be used to map Kinds to a version.
+type Version struct {
+	Version    string
+	AddedIn    string
+	Preferred  bool
+	Deprecated bool
+	Kinds      []Kind
 }
 
 // Group ...
 type Group struct {
-	Name         string
-	VersionKinds []VersionKinds
+	Group      string
+	AddedIn    string
+	Deprecated bool
+	Versions   []Version
 }
 
 // Converter ...

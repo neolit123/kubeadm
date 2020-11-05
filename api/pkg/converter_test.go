@@ -33,23 +33,23 @@ const (
 var (
 	testGroups = []Group{
 		{
-			Name: testGroup0,
-			VersionKinds: []VersionKinds{
-				{"v1", []Kind{&testQue{}}},
+			Group: testGroup0,
+			Versions: []Version{
+				{Version: "v1", Kinds: []Kind{&testQue{}}},
 			},
 		},
 		{
-			Name: testGroup1,
-			VersionKinds: []VersionKinds{
-				{"v1beta1", []Kind{&testFoo{}}},
-				{"v1beta2", []Kind{&testBar1{}, &testBar2{}}},
-				{"v1beta3", []Kind{&testZed{}}},
+			Group: testGroup1,
+			Versions: []Version{
+				{Version: "v1beta1", Kinds: []Kind{&testFoo{}}},
+				{Version: "v1beta2", Kinds: []Kind{&testBar1{}, &testBar2{}}},
+				{Version: "v1beta3", Kinds: []Kind{&testZed{}}},
 			},
 		},
 		{
-			Name: testGroup2,
-			VersionKinds: []VersionKinds{
-				{"v1", []Kind{&testBaz{}}},
+			Group: testGroup2,
+			Versions: []Version{
+				{Version: "v1", Kinds: []Kind{&testBaz{}}},
 			},
 		},
 	}

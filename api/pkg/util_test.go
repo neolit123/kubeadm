@@ -111,7 +111,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "valid: passes validation",
 			expectedError: false,
-			groups: []Group{Group{Name: "foo", VersionKinds: []VersionKinds{{Version: "bar", Kinds: []Kind{
+			groups: []Group{Group{Group: "foo", Versions: []Version{{Version: "bar", Kinds: []Kind{
 				&testKind{
 					TypeMeta:        metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"},
 					convertUpSpec:   &KindSpec{},
@@ -122,7 +122,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: unknown group",
 			expectedError: true,
-			groups: []Group{Group{Name: "foo", VersionKinds: []VersionKinds{{Version: "bar", Kinds: []Kind{
+			groups: []Group{Group{Group: "foo", Versions: []Version{{Version: "bar", Kinds: []Kind{
 				&testKind{
 					TypeMeta:        metav1.TypeMeta{APIVersion: "unknown/bar", Kind: "k1"},
 					convertUpSpec:   &KindSpec{},
@@ -133,7 +133,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: unknown version",
 			expectedError: true,
-			groups: []Group{Group{Name: "foo", VersionKinds: []VersionKinds{{Version: "bar", Kinds: []Kind{
+			groups: []Group{Group{Group: "foo", Versions: []Version{{Version: "bar", Kinds: []Kind{
 				&testKind{
 					TypeMeta:        metav1.TypeMeta{APIVersion: "foo/unknown", Kind: "k1"},
 					convertUpSpec:   &KindSpec{},
@@ -149,17 +149,17 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: empty group name",
 			expectedError: true,
-			groups:        []Group{Group{Name: "", VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{}}}}},
+			groups:        []Group{Group{Group: "", Versions: []Version{{Version: "foo", Kinds: []Kind{}}}}},
 		},
 		{
 			name:          "invalid: empty version name",
 			expectedError: true,
-			groups:        []Group{Group{Name: "foo", VersionKinds: []VersionKinds{{Version: "", Kinds: []Kind{}}}}},
+			groups:        []Group{Group{Group: "foo", Versions: []Version{{Version: "", Kinds: []Kind{}}}}},
 		},
 		{
 			name:          "invalid: object does not match parent group",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Group: testGroup0, Versions: []Version{{Version: "foo", Kinds: []Kind{
 				&testKind{
 					TypeMeta: metav1.TypeMeta{APIVersion: testGroup1 + "/foo", Kind: "bar"},
 				},
@@ -168,7 +168,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object does not match parent version",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Group: testGroup0, Versions: []Version{{Version: "foo", Kinds: []Kind{
 				&testKind{
 					TypeMeta: metav1.TypeMeta{APIVersion: testGroup0 + "/bar", Kind: "baz"},
 				},
@@ -177,7 +177,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object has empty kind",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Group: testGroup0, Versions: []Version{{Version: "foo", Kinds: []Kind{
 				&testKind{
 					TypeMeta: metav1.TypeMeta{APIVersion: testGroup0 + "/foo", Kind: ""},
 				},
@@ -186,7 +186,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object does not embed typemeta",
 			expectedError: true,
-			groups: []Group{Group{Name: testGroup0, VersionKinds: []VersionKinds{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Group: testGroup0, Versions: []Version{{Version: "foo", Kinds: []Kind{
 				&testKindWithoutTypeMeta{},
 			}}}}},
 		},
@@ -302,7 +302,7 @@ func TestGetTypeMeta(t *testing.T) {
 func TestGetKindsForComponentVersion(t *testing.T) {
 	testCases := []struct {
 		name          string
-		vk            []VersionKinds
+		vk            []Version
 		ver           string
 		less          versionCompareFunc
 		expectedError bool
@@ -310,7 +310,7 @@ func TestGetKindsForComponentVersion(t *testing.T) {
 	}{
 		{
 			name: "valid: exact match",
-			vk: []VersionKinds{
+			vk: []Version{
 				{Version: "v1.16.0", Kinds: []Kind{
 					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
 				}},
@@ -324,7 +324,7 @@ func TestGetKindsForComponentVersion(t *testing.T) {
 		},
 		{
 			name: "valid: latest version",
-			vk: []VersionKinds{
+			vk: []Version{
 				{Version: "v1.16.0", Kinds: []Kind{
 					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
 					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
@@ -338,7 +338,7 @@ func TestGetKindsForComponentVersion(t *testing.T) {
 		},
 		{
 			name: "valid: latest version (custom less function)",
-			vk: []VersionKinds{
+			vk: []Version{
 				{Version: "v1.16.0", Kinds: []Kind{
 					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
 					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
@@ -355,7 +355,7 @@ func TestGetKindsForComponentVersion(t *testing.T) {
 		},
 		{
 			name: "valid: version in between",
-			vk: []VersionKinds{
+			vk: []Version{
 				{Version: "v1.16.0", Kinds: []Kind{
 					&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}},
 				}},
@@ -369,7 +369,7 @@ func TestGetKindsForComponentVersion(t *testing.T) {
 		},
 		{
 			name: "invalid: old version",
-			vk: []VersionKinds{
+			vk: []Version{
 				{Version: "v1.16.0", Kinds: []Kind{
 					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
 					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
@@ -383,7 +383,7 @@ func TestGetKindsForComponentVersion(t *testing.T) {
 		},
 		{
 			name: "invalid: found non-semver version",
-			vk: []VersionKinds{
+			vk: []Version{
 				{Version: "foo", Kinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}}}},
 			},
 			ver:           "v1.15.0",
@@ -391,13 +391,13 @@ func TestGetKindsForComponentVersion(t *testing.T) {
 		},
 		{
 			name:          "invalid: version with empty kinds",
-			vk:            []VersionKinds{{Version: "v1.16.0", Kinds: []Kind{}}},
+			vk:            []Version{{Version: "v1.16.0", Kinds: []Kind{}}},
 			ver:           "v1.17.0",
 			expectedError: true,
 		},
 		{
 			name:          "invalid: empty input",
-			vk:            []VersionKinds{},
+			vk:            []Version{},
 			ver:           "v1.16.0",
 			expectedError: true,
 		},

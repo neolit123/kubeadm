@@ -63,12 +63,12 @@ func ValidateGroups(groups []Group) error {
 		return errors.New("found an empty or nil list of groups")
 	}
 	for _, g := range groups {
-		if len(g.Name) == 0 {
+		if len(g.Group) == 0 {
 			return errors.New("found an empty group name")
 		}
-		for i, vk := range g.VersionKinds {
+		for i, vk := range g.Versions {
 			if len(vk.Version) == 0 {
-				return errors.Errorf("group %q has a version with empty name at position %d", g.Name, i)
+				return errors.Errorf("group %q has a version with empty name at position %d", g.Group, i)
 			}
 			for _, k := range vk.Kinds {
 				t := reflect.TypeOf(k)
@@ -76,8 +76,8 @@ func ValidateGroups(groups []Group) error {
 					return errors.Wrapf(err, "object %v does not embed %v", t, reflect.TypeOf(metav1.TypeMeta{}))
 				}
 				gvk := k.GetDefaultTypeMeta().GroupVersionKind()
-				if gvk.Group != g.Name {
-					return errors.Errorf("expected group for object %v: %q, got: %q", t, g.Name, gvk.Group)
+				if gvk.Group != g.Group {
+					return errors.Errorf("expected group for object %v: %q, got: %q", t, g.Group, gvk.Group)
 				}
 				if gvk.Version != vk.Version {
 					return errors.Errorf("expected version for object %v: %q, got: %q", t, vk.Version, gvk.Version)
@@ -244,7 +244,7 @@ func getTypeMeta(object interface{}) (*metav1.TypeMeta, error) {
 type versionCompareFunc = func(*utilversion.Version, *utilversion.Version) bool
 
 // GetKindsForComponentVersion ...
-func GetKindsForComponentVersion(versionKinds []VersionKinds, componentVersion string, less versionCompareFunc) ([]Kind, error) {
+func GetKindsForComponentVersion(versionKinds []Version, componentVersion string, less versionCompareFunc) ([]Kind, error) {
 	cver, err := utilversion.ParseGeneric(componentVersion)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot parse input component version")
