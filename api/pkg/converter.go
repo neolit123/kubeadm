@@ -118,11 +118,11 @@ func (cv *Converter) NewKindInstance(typemeta *metav1.TypeMeta) (Kind, error) {
 		if g.Group != gvk.Group {
 			continue
 		}
-		for _, vk := range g.Versions {
-			if gvk.Version != vk.Version {
+		for _, v := range g.Versions {
+			if gvk.Version != v.Version {
 				continue
 			}
-			for _, k := range vk.Kinds {
+			for _, k := range v.Kinds {
 				if gvk.Kind != k.GetDefaultTypeMeta().Kind {
 					continue
 				}
@@ -175,8 +175,8 @@ func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) 
 	// flatten
 	kinds := []Kind{}
 	for _, g := range cv.groups {
-		for _, vk := range g.Versions {
-			for _, k := range vk.Kinds {
+		for _, v := range g.Versions {
+			for _, k := range v.Kinds {
 				kinds = append(kinds, k)
 			}
 		}

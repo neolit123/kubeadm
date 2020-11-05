@@ -110,13 +110,39 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "valid: passes validation",
 			expectedError: false,
-			groups: []Group{Group{Group: "foo", Versions: []Version{{Version: "bar", Kinds: []Kind{
+			groups: []Group{Group{Group: "foo", AddedIn: "v1.11", Versions: []Version{{Version: "bar", AddedIn: "v1.11", Preferred: true, Kinds: []Kind{
 				&testKind{
 					TypeMeta:        metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"},
 					convertUpSpec:   &KindSpec{},
 					convertDownSpec: &KindSpec{},
 				},
 			}}}}},
+		},
+		{
+			name:          "invalid: no preferred versions",
+			expectedError: true,
+			groups: []Group{Group{Group: "foo", AddedIn: "v1.11", Versions: []Version{{Version: "bar", AddedIn: "v1.11", Kinds: []Kind{
+				&testKind{
+					TypeMeta:        metav1.TypeMeta{APIVersion: "foo/bar", Kind: "k1"},
+					convertUpSpec:   &KindSpec{},
+					convertDownSpec: &KindSpec{},
+				},
+			}}}}},
+		},
+		{
+			name:          "invalid: missing group AddedIn",
+			expectedError: true,
+			groups:        []Group{Group{Group: "foo"}},
+		},
+		{
+			name:          "invalid: missing version AddedIn",
+			expectedError: true,
+			groups:        []Group{Group{Group: "foo", AddedIn: "v1.15", Versions: []Version{{Version: "bar"}}}},
+		},
+		{
+			name:          "invalid: all versions are deprecated",
+			expectedError: true,
+			groups:        []Group{Group{Group: "foo", AddedIn: "v1.15", Versions: []Version{{Version: "bar", AddedIn: "v1.15", Preferred: true, Deprecated: true}}}},
 		},
 		{
 			name:          "invalid: unknown group",
@@ -148,17 +174,17 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: empty group name",
 			expectedError: true,
-			groups:        []Group{Group{Group: "", Versions: []Version{{Version: "foo", Kinds: []Kind{}}}}},
+			groups:        []Group{Group{Group: "", AddedIn: "v1.15", Versions: []Version{{Version: "foo", AddedIn: "v1.15", Kinds: []Kind{}}}}},
 		},
 		{
 			name:          "invalid: empty version name",
 			expectedError: true,
-			groups:        []Group{Group{Group: "foo", Versions: []Version{{Version: "", Kinds: []Kind{}}}}},
+			groups:        []Group{Group{Group: "foo", AddedIn: "v1.15", Versions: []Version{{Version: "", AddedIn: "v1.15", Kinds: []Kind{}}}}},
 		},
 		{
 			name:          "invalid: object does not match parent group",
 			expectedError: true,
-			groups: []Group{Group{Group: testGroup0, Versions: []Version{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Group: testGroup0, AddedIn: "v1.15", Versions: []Version{{Version: "foo", AddedIn: "v1.15", Kinds: []Kind{
 				&testKind{
 					TypeMeta: metav1.TypeMeta{APIVersion: testGroup1 + "/foo", Kind: "bar"},
 				},
@@ -167,7 +193,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object does not match parent version",
 			expectedError: true,
-			groups: []Group{Group{Group: testGroup0, Versions: []Version{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Group: testGroup0, AddedIn: "v1.15", Versions: []Version{{Version: "foo", AddedIn: "v1.15", Kinds: []Kind{
 				&testKind{
 					TypeMeta: metav1.TypeMeta{APIVersion: testGroup0 + "/bar", Kind: "baz"},
 				},
@@ -176,7 +202,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object has empty kind",
 			expectedError: true,
-			groups: []Group{Group{Group: testGroup0, Versions: []Version{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Group: testGroup0, AddedIn: "v1.15", Versions: []Version{{Version: "foo", AddedIn: "v1.15", Kinds: []Kind{
 				&testKind{
 					TypeMeta: metav1.TypeMeta{APIVersion: testGroup0 + "/foo", Kind: ""},
 				},
@@ -185,7 +211,7 @@ func TestValidateGroups(t *testing.T) {
 		{
 			name:          "invalid: object does not embed typemeta",
 			expectedError: true,
-			groups: []Group{Group{Group: testGroup0, Versions: []Version{{Version: "foo", Kinds: []Kind{
+			groups: []Group{Group{Group: testGroup0, AddedIn: "v1.15", Versions: []Version{{Version: "foo", AddedIn: "v1.15", Kinds: []Kind{
 				&testKindWithoutTypeMeta{},
 			}}}}},
 		},

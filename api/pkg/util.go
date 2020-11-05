@@ -66,11 +66,25 @@ func ValidateGroups(groups []Group) error {
 		if len(g.Group) == 0 {
 			return errors.New("found an empty group name")
 		}
-		for i, vk := range g.Versions {
-			if len(vk.Version) == 0 {
+		if _, err := utilversion.ParseGeneric(g.AddedIn); err != nil {
+			return errors.Wrapf(err, "could not parse the AddedIn version for group %q", g.Group)
+		}
+		foundPreferred := 0
+		foundDeprecated := 0
+		for i, v := range g.Versions {
+			if len(v.Version) == 0 {
 				return errors.Errorf("group %q has a version with empty name at position %d", g.Group, i)
 			}
-			for _, k := range vk.Kinds {
+			if v.Deprecated {
+				foundDeprecated++
+			}
+			if v.Preferred {
+				foundPreferred++
+			}
+			if _, err := utilversion.ParseGeneric(v.AddedIn); err != nil {
+				return errors.Wrapf(err, "could not parse the AddedIn version for API version %q in group %q", v.Version, g.Group)
+			}
+			for _, k := range v.Kinds {
 				t := reflect.TypeOf(k)
 				if _, err := getTypeMeta(k); err != nil {
 					return errors.Wrapf(err, "object %v does not embed %v", t, reflect.TypeOf(metav1.TypeMeta{}))
@@ -79,8 +93,8 @@ func ValidateGroups(groups []Group) error {
 				if gvk.Group != g.Group {
 					return errors.Errorf("expected group for object %v: %q, got: %q", t, g.Group, gvk.Group)
 				}
-				if gvk.Version != vk.Version {
-					return errors.Errorf("expected version for object %v: %q, got: %q", t, vk.Version, gvk.Version)
+				if gvk.Version != v.Version {
+					return errors.Errorf("expected version for object %v: %q, got: %q", t, v.Version, gvk.Version)
 				}
 				if gvk.Kind == "" {
 					return errors.Errorf("empty Kind for object %v", t)
@@ -92,6 +106,12 @@ func ValidateGroups(groups []Group) error {
 					return errors.Wrapf(err, "error in ConvertDownSpec for %v", t)
 				}
 			}
+		}
+		if foundPreferred != 1 {
+			return errors.Errorf("group %q must include exactly one preferred version", g.Group)
+		}
+		if foundDeprecated == len(g.Versions) {
+			return errors.Errorf("group %q must include at least one non-deprecated version", g.Group)
 		}
 	}
 	return nil
