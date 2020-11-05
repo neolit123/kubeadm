@@ -135,20 +135,6 @@ func (cv *Converter) NewKindInstance(typemeta *metav1.TypeMeta) (Kind, error) {
 	return nil, errors.Errorf("no object for %s", typemeta)
 }
 
-// getGroup ...
-func (cv *Converter) getGroup(name string) (*Group, int, error) {
-	if len(cv.groups) == 0 {
-		return nil, -1, errors.New("no groups defined")
-	}
-	for i := range cv.groups {
-		g := cv.groups[i]
-		if name == g.Group {
-			return &g, i, nil
-		}
-	}
-	return nil, -1, errors.Errorf("unknown group %q", name)
-}
-
 // ConvertTo ...
 func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) (*KindSpec, error) {
 	if err := ValidateKindSpec(in); err != nil {
@@ -158,12 +144,12 @@ func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) 
 		return nil, errors.New("empty input spec")
 	}
 
-	_, targetGroupIdx, err := cv.getGroup(targetGroup)
+	_, targetGroupIdx, err := getGroup(cv.groups, targetGroup)
 	if err != nil {
 		return nil, err
 	}
 	sourceGVK := in.Kinds[0].GetDefaultTypeMeta().GroupVersionKind()
-	sourceGroupObj, sourceGroupIdx, err := cv.getGroup(sourceGVK.Group)
+	sourceGroupObj, sourceGroupIdx, err := getGroup(cv.groups, sourceGVK.Group)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +245,7 @@ convert:
 
 // ConvertToLatest ...
 func (cv *Converter) ConvertToLatest(in *KindSpec, targetGroup string) (*KindSpec, error) {
-	g, _, err := cv.getGroup(targetGroup)
+	g, _, err := getGroup(cv.groups, targetGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +255,7 @@ func (cv *Converter) ConvertToLatest(in *KindSpec, targetGroup string) (*KindSpe
 
 // ConvertToOldest ...
 func (cv *Converter) ConvertToOldest(in *KindSpec, targetGroup string) (*KindSpec, error) {
-	g, _, err := cv.getGroup(targetGroup)
+	g, _, err := getGroup(cv.groups, targetGroup)
 	if err != nil {
 		return nil, err
 	}

@@ -261,6 +261,32 @@ func getTypeMeta(object interface{}) (*metav1.TypeMeta, error) {
 	return typemeta, nil
 }
 
+func getGroup(groups []Group, group string) (*Group, int, error) {
+	if len(groups) == 0 {
+		return nil, -1, errors.New("no groups defined")
+	}
+	for i := range groups {
+		g := groups[i]
+		if group == g.Group {
+			return &g, i, nil
+		}
+	}
+	return nil, -1, errors.Errorf("unknown group %q", group)
+}
+
+func getVersion(versions []Version, version string) (*Version, int, error) {
+	if len(versions) == 0 {
+		return nil, -1, errors.New("no versions defined")
+	}
+	for i := range versions {
+		v := versions[i]
+		if version == v.Version {
+			return &v, i, nil
+		}
+	}
+	return nil, -1, errors.Errorf("unknown version %q", version)
+}
+
 // GetPreferredVersion ...
 func GetPreferredVersion(groups []Group, group string, compVer string, usePreferred bool, lessEq func(string, string) bool) (*Version, error) {
 	if lessEq == nil {
@@ -268,16 +294,9 @@ func GetPreferredVersion(groups []Group, group string, compVer string, usePrefer
 			return utilversion.MustParseGeneric(a).AtLeast(utilversion.MustParseGeneric(b))
 		}
 	}
-	var g *Group
-	for i := range groups {
-		gTmp := groups[i]
-		if gTmp.Group == group {
-			g = &gTmp
-			break
-		}
-	}
-	if g == nil {
-		return nil, errors.Errorf("unknown group %q", group)
+	g, _, err := getGroup(groups, group)
+	if err != nil {
+		return nil, err
 	}
 	if _, err := utilversion.ParseGeneric(compVer); err != nil {
 		return nil, errors.Wrap(err, "cannot parse component version")
@@ -296,4 +315,39 @@ func GetPreferredVersion(groups []Group, group string, compVer string, usePrefer
 		return &ver, nil
 	}
 	return nil, errors.Errorf("could not find a supported API version in group %q for component version %q", group, compVer)
+}
+
+// IsGroupDeprecated ...
+func IsGroupDeprecated(groups []Group, group string) (bool, error) {
+	g, _, err := getGroup(groups, group)
+	if err != nil {
+		return false, err
+	}
+	return g.Deprecated, nil
+}
+
+// IsVersionDeprecated ...
+func IsVersionDeprecated(groups []Group, group, version string) (bool, error) {
+	g, _, err := getGroup(groups, group)
+	if err != nil {
+		return false, err
+	}
+	v, _, err := getVersion(g.Versions, version)
+	if err != nil {
+		return false, err
+	}
+	return v.Deprecated, nil
+}
+
+// IsVersionPreferred ...
+func IsVersionPreferred(groups []Group, group, version string) (bool, error) {
+	g, _, err := getGroup(groups, group)
+	if err != nil {
+		return false, err
+	}
+	v, _, err := getVersion(g.Versions, version)
+	if err != nil {
+		return false, err
+	}
+	return v.Preferred, nil
 }
