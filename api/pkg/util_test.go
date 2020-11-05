@@ -324,7 +324,7 @@ func TestGetTypeMeta(t *testing.T) {
 	}
 }
 
-func TestGetPreferredVersion(t *testing.T) {
+func TestAPIVersionForComponentVersion(t *testing.T) {
 	testCases := []struct {
 		name            string
 		groups          []Group
@@ -423,7 +423,7 @@ func TestGetPreferredVersion(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ver, err := GetPreferredVersion(tc.groups, tc.group, tc.compVer, tc.usePreferred, nil)
+			ver, err := APIVersionForComponentVersion(tc.groups, tc.group, tc.compVer, tc.usePreferred, nil)
 			if (err != nil) != tc.expectedError {
 				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
 			}

@@ -287,8 +287,8 @@ func getVersion(versions []Version, version string) (*Version, int, error) {
 	return nil, -1, errors.Errorf("unknown version %q", version)
 }
 
-// GetPreferredVersion ...
-func GetPreferredVersion(groups []Group, group string, compVer string, usePreferred bool, lessEq func(string, string) bool) (*Version, error) {
+// APIVersionForComponentVersion ...
+func APIVersionForComponentVersion(groups []Group, group string, compVer string, usePreferred bool, lessEq func(string, string) bool) (*Version, error) {
 	if lessEq == nil {
 		lessEq = func(a string, b string) bool {
 			return utilversion.MustParseGeneric(a).AtLeast(utilversion.MustParseGeneric(b))
