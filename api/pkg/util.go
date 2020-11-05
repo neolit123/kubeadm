@@ -241,44 +241,39 @@ func getTypeMeta(object interface{}) (*metav1.TypeMeta, error) {
 	return typemeta, nil
 }
 
-type versionCompareFunc = func(*utilversion.Version, *utilversion.Version) bool
-
-// GetKindsForComponentVersion ...
-func GetKindsForComponentVersion(versionKinds []Version, componentVersion string, less versionCompareFunc) ([]Kind, error) {
-	cver, err := utilversion.ParseGeneric(componentVersion)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot parse input component version")
-	}
-	if len(versionKinds) == 0 {
-		return nil, errors.Errorf("received empty list of versions")
-	}
-	versions := make([]*utilversion.Version, len(versionKinds))
-	for i, vk := range versionKinds {
-		if vk.Version == componentVersion { // exact match
-			return vk.Kinds, nil
-		}
-		if len(vk.Kinds) == 0 {
-			return nil, errors.Errorf("found empty list of Kinds at position %d", i)
-		}
-		ver, err := utilversion.ParseGeneric(vk.Version)
-		if err != nil {
-			return nil, errors.Wrapf(err, "cannot parse component version at position %d", i)
-		}
-		versions[i] = ver
-	}
-	if less == nil {
-		less = func(a *utilversion.Version, b *utilversion.Version) bool {
-			return a.LessThan(b)
+// GetPreferredVersion ...
+func GetPreferredVersion(groups []Group, group string, compVer string, usePreferred bool, lessEq func(string, string) bool) (*Version, error) {
+	if lessEq == nil {
+		lessEq = func(a string, b string) bool {
+			return utilversion.MustParseGeneric(a).AtLeast(utilversion.MustParseGeneric(b))
 		}
 	}
-	for i := range versionKinds {
-		if less(cver, versions[i]) {
-			if i == 0 {
-				return nil, errors.Errorf("component version %q is older than the oldest known version %q",
-					componentVersion, versionKinds[i].Version)
-			}
-			return versionKinds[i-1].Kinds, nil
+	var g *Group
+	for i := range groups {
+		gTmp := groups[i]
+		if gTmp.Group == group {
+			g = &gTmp
+			break
 		}
 	}
-	return versionKinds[len(versionKinds)-1].Kinds, nil
+	if g == nil {
+		return nil, errors.Errorf("unknown group %q", group)
+	}
+	if _, err := utilversion.ParseGeneric(compVer); err != nil {
+		return nil, errors.Wrap(err, "cannot parse component version")
+	}
+	for i := len(g.Versions) - 1; i > -1; i-- {
+		ver := g.Versions[i]
+		if !lessEq(compVer, ver.AddedIn) {
+			continue
+		}
+		if !usePreferred {
+			return &ver, nil
+		}
+		if !ver.Preferred {
+			continue
+		}
+		return &ver, nil
+	}
+	return nil, errors.Errorf("could not find a supported API version in group %q for component version %q", group, compVer)
 }

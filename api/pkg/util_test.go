@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilversion "k8s.io/apimachinery/pkg/util/version"
 )
 
 type testKind struct {
@@ -299,123 +298,114 @@ func TestGetTypeMeta(t *testing.T) {
 	}
 }
 
-func TestGetKindsForComponentVersion(t *testing.T) {
+func TestGetPreferredVersion(t *testing.T) {
 	testCases := []struct {
-		name          string
-		vk            []Version
-		ver           string
-		less          versionCompareFunc
-		expectedError bool
-		expectedKinds []Kind
+		name            string
+		groups          []Group
+		group           string
+		compVer         string
+		usePreferred    bool
+		expectedVersion *Version
+		lessEq          func(string, string) bool
+		expectedError   bool
 	}{
 		{
-			name: "valid: exact match",
-			vk: []Version{
-				{Version: "v1.16.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
-				}},
-				{Version: "v1.17.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
-				}},
-			},
-			ver:           "v1.16.0",
-			expectedKinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}}},
+			name: "valid: found valid version without preferred flag",
+			groups: []Group{{Group: "foo", Versions: []Version{
+				{Version: "v1", AddedIn: "v1.14.0", Preferred: false},
+				{Version: "v2", AddedIn: "v1.15.0", Preferred: false},
+				{Version: "v3", AddedIn: "v1.17.0", Preferred: false},
+			}}},
+			group:           "foo",
+			compVer:         "v1.16.0",
+			expectedVersion: &Version{Version: "v2", AddedIn: "v1.15.0", Preferred: false},
 		},
 		{
-			name: "valid: latest version",
-			vk: []Version{
-				{Version: "v1.16.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
-				}},
-				{Version: "v1.17.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}},
-				}},
-			},
-			ver:           "v1.18.0",
-			expectedKinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}}},
+			name: "valid: found valid version with preferred flag",
+			groups: []Group{{Group: "foo", Versions: []Version{
+				{Version: "v1", AddedIn: "v1.14.0", Preferred: true},
+				{Version: "v2", AddedIn: "v1.15.0", Preferred: false},
+				{Version: "v3", AddedIn: "v1.17.0", Preferred: false},
+			}}},
+			group:           "foo",
+			compVer:         "v1.16.0",
+			usePreferred:    true,
+			expectedVersion: &Version{Version: "v1", AddedIn: "v1.14.0", Preferred: true},
 		},
 		{
-			name: "valid: latest version (custom less function)",
-			vk: []Version{
-				{Version: "v1.16.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
-				}},
-				{Version: "v1.17.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}},
-				}},
-			},
-			less: func(a *utilversion.Version, b *utilversion.Version) bool {
-				return a.LessThan(b)
-			},
-			ver:           "v1.18.0",
-			expectedKinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}}},
+			name: "valid: component version is newer use latest",
+			groups: []Group{{Group: "foo", Versions: []Version{
+				{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
+				{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
+				{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+			}}},
+			group:           "foo",
+			compVer:         "v1.16.0",
+			expectedVersion: &Version{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
 		},
 		{
-			name: "valid: version in between",
-			vk: []Version{
-				{Version: "v1.16.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}},
-				}},
-				{Version: "v1.18.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
-				}},
-			},
-			ver:           "v1.17.0",
-			expectedKinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}}},
+			name: "valid: component version is newer use latest preferred",
+			groups: []Group{{Group: "foo", Versions: []Version{
+				{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
+				{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
+				{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+			}}},
+			group:           "foo",
+			usePreferred:    true,
+			compVer:         "v1.16.0",
+			expectedVersion: &Version{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
 		},
 		{
-			name: "invalid: old version",
-			vk: []Version{
-				{Version: "v1.16.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}},
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "bar"}},
-				}},
-				{Version: "v1.17.0", Kinds: []Kind{
-					&testKind{TypeMeta: metav1.TypeMeta{Kind: "baz"}},
-				}},
+			name: "valid: use custom lessEq",
+			groups: []Group{{Group: "foo", Versions: []Version{
+				{Version: "v1", AddedIn: "v1.11.0", Preferred: false},
+				{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
+				{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+			}}},
+			group:   "foo",
+			compVer: "v1.11.0",
+			lessEq: func(a string, b string) bool {
+				return a == b
 			},
-			ver:           "v1.15.0",
+			expectedVersion: &Version{Version: "v1", AddedIn: "v1.11.0", Preferred: false},
+		},
+		{
+			name: "invalid: version too old",
+			groups: []Group{{Group: "foo", Versions: []Version{
+				{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
+				{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
+				{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+			}}},
+			group:         "foo",
+			compVer:       "v1.10.0",
 			expectedError: true,
 		},
 		{
-			name: "invalid: found non-semver version",
-			vk: []Version{
-				{Version: "foo", Kinds: []Kind{&testKind{TypeMeta: metav1.TypeMeta{Kind: "foo"}}}},
-			},
-			ver:           "v1.15.0",
+			name:          "invalid: cannot parse compVer",
+			groups:        []Group{{Group: "foo"}},
+			group:         "foo",
+			compVer:       "bar",
 			expectedError: true,
 		},
 		{
-			name:          "invalid: version with empty kinds",
-			vk:            []Version{{Version: "v1.16.0", Kinds: []Kind{}}},
-			ver:           "v1.17.0",
-			expectedError: true,
-		},
-		{
-			name:          "invalid: empty input",
-			vk:            []Version{},
-			ver:           "v1.16.0",
-			expectedError: true,
-		},
-		{
-			name:          "invalid: component version is not semver",
-			ver:           "foo",
+			name:          "invalid: cannot find group",
+			groups:        []Group{{Group: "foo"}},
+			group:         "bar",
 			expectedError: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			kinds, err := GetKindsForComponentVersion(tc.vk, tc.ver, tc.less)
+			ver, err := GetPreferredVersion(tc.groups, tc.group, tc.compVer, tc.usePreferred, nil)
 			if (err != nil) != tc.expectedError {
 				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
 			}
-			if !reflect.DeepEqual(tc.expectedKinds, kinds) {
-				t.Fatalf("expected kinds %#v, got %#v", tc.expectedKinds, kinds)
+			if err != nil {
+				return
+			}
+			if !reflect.DeepEqual(tc.expectedVersion, ver) {
+				t.Fatalf("expected version %#v, got %#v", tc.expectedVersion, ver)
 			}
 		})
 	}
