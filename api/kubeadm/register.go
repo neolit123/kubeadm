@@ -17,16 +17,16 @@ limitations under the License.
 package kubeadm
 
 import (
-	"k8s.io/kubeadm/api/kubeadm/groups"
-	"k8s.io/kubeadm/api/kubeadm/v1beta1"
-	"k8s.io/kubeadm/api/kubeadm/v1beta2"
+	group "k8s.io/kubeadm/api/kubeadm/kubeadm"
+	"k8s.io/kubeadm/api/kubeadm/kubeadm/v1beta1"
+	"k8s.io/kubeadm/api/kubeadm/kubeadm/v1beta2"
 	"k8s.io/kubeadm/api/pkg"
 )
 
 // Groups ...
 var Groups = []pkg.Group{
 	pkg.Group{
-		Group:      groups.GroupKubeadm,
+		Group:      group.Group,
 		AddedIn:    "v1.5.0",
 		Deprecated: false,
 		Versions: []pkg.Version{

@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"k8s.io/kubeadm/api/kubeadm"
-	"k8s.io/kubeadm/api/kubeadm/groups"
-	"k8s.io/kubeadm/api/kubeadm/v1beta2"
+	kubeadmgroup "k8s.io/kubeadm/api/kubeadm/kubeadm"
+	"k8s.io/kubeadm/api/kubeadm/kubeadm/v1beta2"
 	"k8s.io/kubeadm/api/pkg"
 )
 
@@ -114,12 +114,12 @@ func TestDemo(t *testing.T) {
 		}
 
 		spec := pkg.NewKindSpec().WithKinds(obj)
-		spec, err = cv.ConvertTo(spec, groups.GroupKubeadm, "v1beta1")
+		spec, err = cv.ConvertTo(spec, kubeadmgroup.Group, "v1beta1")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		spec, err = cv.ConvertTo(spec, groups.GroupKubeadm, "v1beta2")
+		spec, err = cv.ConvertTo(spec, kubeadmgroup.Group, "v1beta2")
 		if err != nil {
 			t.Fatal(err)
 		}

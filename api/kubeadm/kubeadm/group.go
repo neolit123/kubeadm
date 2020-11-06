@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package groups
+package kubeadm
 
 const (
-	// GroupKubeadm ...
-	GroupKubeadm = "kubeadm.k8s.io"
+	// Group ...
+	Group = "kubeadm.k8s.io"
 )

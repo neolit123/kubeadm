@@ -14,39 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta2
+package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/kubeadm/api/kubeadm/groups"
+	"k8s.io/kubeadm/api/kubeadm/kubeadm"
 )
 
 // Version ...
-const Version = "v1beta2"
+const Version = "v1beta1"
 
 // GetDefaultTypeMeta ...
 func (*InitConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {
-	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "InitConfiguration"}
+	return &metav1.TypeMeta{APIVersion: kubeadm.Group + "/" + Version, Kind: "InitConfiguration"}
 }
 
 // ---------------
 
 // GetDefaultTypeMeta ...
 func (*ClusterConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {
-	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "ClusterConfiguration"}
+	return &metav1.TypeMeta{APIVersion: kubeadm.Group + "/" + Version, Kind: "ClusterConfiguration"}
 }
 
 // ---------------
 
 // GetDefaultTypeMeta ...
 func (*ClusterStatus) GetDefaultTypeMeta() *metav1.TypeMeta {
-	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "ClusterStatus"}
+	return &metav1.TypeMeta{APIVersion: kubeadm.Group + "/" + Version, Kind: "ClusterStatus"}
 }
 
 // ---------------
 
 // GetDefaultTypeMeta ...
 func (*JoinConfiguration) GetDefaultTypeMeta() *metav1.TypeMeta {
-	return &metav1.TypeMeta{APIVersion: groups.GroupKubeadm + "/" + Version, Kind: "JoinConfiguration"}
+	return &metav1.TypeMeta{APIVersion: kubeadm.Group + "/" + Version, Kind: "JoinConfiguration"}
 }
