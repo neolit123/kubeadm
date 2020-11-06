@@ -30,17 +30,17 @@ const (
 // Kind respresents an interface that all API objects that support validation, defaulting
 // and conversion in a version package must implement.
 type Kind interface {
-	// ConvertUp must take and older versioned Kind as input and covert it to a
+	// ConvertFrom must take and older versioned Kind as input and covert it to a
 	// Kind of the current version. Older version packages must not import newer ones.
 	// Newer version packages must only import the prior version.
-	ConvertUp(*Converter, *KindSpec) (*KindSpec, error)
-	// ConvertDown must take the current version Kind as input and down-convert it
+	ConvertFrom(*Converter, *KindSpec) (*KindSpec, error)
+	// ConvertTo must take the current version Kind as input and down-convert it
 	// to a prior version Kind.
-	ConvertDown(*Converter, *KindSpec) (*KindSpec, error)
-	// ConvertUpSpec ...
-	ConvertUpSpec() *KindSpec
-	// ConvertDownSpec ...
-	ConvertDownSpec() *KindSpec
+	ConvertTo(*Converter, *KindSpec) (*KindSpec, error)
+	// ConvertFromSpec ...
+	ConvertFromSpec() *KindSpec
+	// ConvertToSpec ...
+	ConvertToSpec() *KindSpec
 	// Validate must define the validation function for this Kind.
 	Validate() error
 	// Default must define the defaulting function for this Kind.

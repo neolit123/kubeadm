@@ -99,11 +99,11 @@ func ValidateGroups(groups []Group) error {
 				if gvk.Kind == "" {
 					return errors.Errorf("empty Kind for object %v", t)
 				}
-				if err := ValidateKindSpec(k.ConvertUpSpec()); err != nil {
-					return errors.Wrapf(err, "error in ConvertUpSpec for %v", t)
+				if err := ValidateKindSpec(k.ConvertFromSpec()); err != nil {
+					return errors.Wrapf(err, "error in ConvertFromSpec for %v", t)
 				}
-				if err := ValidateKindSpec(k.ConvertDownSpec()); err != nil {
-					return errors.Wrapf(err, "error in ConvertDownSpec for %v", t)
+				if err := ValidateKindSpec(k.ConvertToSpec()); err != nil {
+					return errors.Wrapf(err, "error in ConvertToSpec for %v", t)
 				}
 			}
 		}

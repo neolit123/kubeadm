@@ -30,25 +30,25 @@ type testKind struct {
 	convertDownSpec *KindSpec
 }
 
-func (*testKind) ConvertUp(*Converter, *KindSpec) (*KindSpec, error)   { return nil, nil }
-func (*testKind) ConvertDown(*Converter, *KindSpec) (*KindSpec, error) { return nil, nil }
+func (*testKind) ConvertFrom(*Converter, *KindSpec) (*KindSpec, error)   { return nil, nil }
+func (*testKind) ConvertTo(*Converter, *KindSpec) (*KindSpec, error) { return nil, nil }
 func (*testKind) Default() error                                       { return nil }
 func (*testKind) Validate() error                                      { return nil }
 func (t *testKind) GetDefaultTypeMeta() *metav1.TypeMeta               { return &t.TypeMeta }
-func (t *testKind) ConvertUpSpec() *KindSpec                           { return t.convertUpSpec }
-func (t *testKind) ConvertDownSpec() *KindSpec                         { return t.convertDownSpec }
+func (t *testKind) ConvertFromSpec() *KindSpec                           { return t.convertUpSpec }
+func (t *testKind) ConvertToSpec() *KindSpec                         { return t.convertDownSpec }
 
 type testKindWithoutTypeMeta struct{}
 
-func (*testKindWithoutTypeMeta) ConvertUp(*Converter, *KindSpec) (*KindSpec, error) { return nil, nil }
-func (*testKindWithoutTypeMeta) ConvertDown(*Converter, *KindSpec) (*KindSpec, error) {
+func (*testKindWithoutTypeMeta) ConvertFrom(*Converter, *KindSpec) (*KindSpec, error) { return nil, nil }
+func (*testKindWithoutTypeMeta) ConvertTo(*Converter, *KindSpec) (*KindSpec, error) {
 	return nil, nil
 }
 func (*testKindWithoutTypeMeta) Default() error                         { return nil }
 func (*testKindWithoutTypeMeta) Validate() error                        { return nil }
 func (t *testKindWithoutTypeMeta) GetDefaultTypeMeta() *metav1.TypeMeta { return nil }
-func (t *testKindWithoutTypeMeta) ConvertUpSpec() *KindSpec             { return nil }
-func (t *testKindWithoutTypeMeta) ConvertDownSpec() *KindSpec           { return nil }
+func (t *testKindWithoutTypeMeta) ConvertFromSpec() *KindSpec             { return nil }
+func (t *testKindWithoutTypeMeta) ConvertToSpec() *KindSpec           { return nil }
 
 func TestValidateKindSpec(t *testing.T) {
 	testCases := []struct {

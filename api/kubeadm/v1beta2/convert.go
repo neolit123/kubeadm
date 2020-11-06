@@ -21,8 +21,8 @@ import (
 	"k8s.io/kubeadm/api/pkg"
 )
 
-// ConvertUp ...
-func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
+// ConvertFrom ...
+func (*InitConfiguration) ConvertFrom(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	new := &InitConfiguration{}
 	pkg.DeepCopy(new, ink)
@@ -37,8 +37,8 @@ func (*InitConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.K
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
-// ConvertDown ...
-func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
+// ConvertTo ...
+func (*InitConfiguration) ConvertTo(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	cv.AddKindsToCache(ink)
 	new := &v1beta1.InitConfiguration{}
@@ -46,74 +46,74 @@ func (*InitConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
-// ConvertUpSpec ...
-func (*InitConfiguration) ConvertUpSpec() *pkg.KindSpec {
+// ConvertFromSpec ...
+func (*InitConfiguration) ConvertFromSpec() *pkg.KindSpec {
 	return pkg.NewKindSpec().WithKinds(&v1beta1.InitConfiguration{})
 }
 
-// ConvertDownSpec ...
-func (*InitConfiguration) ConvertDownSpec() *pkg.KindSpec {
+// ConvertToSpec ...
+func (*InitConfiguration) ConvertToSpec() *pkg.KindSpec {
 	return pkg.NewKindSpec().WithKinds(&InitConfiguration{})
 }
 
 // -------
 
-// ConvertUp ...
-func (*ClusterConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
+// ConvertFrom ...
+func (*ClusterConfiguration) ConvertFrom(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	new := &ClusterConfiguration{}
 	pkg.DeepCopy(new, ink)
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
-// ConvertDown ...
-func (*ClusterConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
+// ConvertTo ...
+func (*ClusterConfiguration) ConvertTo(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	new := &v1beta1.ClusterConfiguration{}
 	pkg.DeepCopy(new, ink)
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
-// ConvertUpSpec ...
-func (*ClusterConfiguration) ConvertUpSpec() *pkg.KindSpec {
+// ConvertFromSpec ...
+func (*ClusterConfiguration) ConvertFromSpec() *pkg.KindSpec {
 	return pkg.NewKindSpec().WithKinds(&v1beta1.ClusterConfiguration{})
 }
 
-// ConvertDownSpec ...
-func (*ClusterConfiguration) ConvertDownSpec() *pkg.KindSpec {
+// ConvertToSpec ...
+func (*ClusterConfiguration) ConvertToSpec() *pkg.KindSpec {
 	return pkg.NewKindSpec().WithKinds(&ClusterConfiguration{})
 }
 
 // -------
 
-// ConvertUp ...
-func (*ClusterStatus) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
+// ConvertFrom ...
+func (*ClusterStatus) ConvertFrom(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	new := &ClusterStatus{}
 	pkg.DeepCopy(new, in.Kinds[0])
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
-// ConvertDown ...
-func (*ClusterStatus) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
+// ConvertTo ...
+func (*ClusterStatus) ConvertTo(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	new := &v1beta1.ClusterStatus{}
 	pkg.DeepCopy(new, in.Kinds[0])
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
-// ConvertUpSpec ...
-func (*ClusterStatus) ConvertUpSpec() *pkg.KindSpec {
+// ConvertFromSpec ...
+func (*ClusterStatus) ConvertFromSpec() *pkg.KindSpec {
 	return pkg.NewKindSpec().WithKinds(&v1beta1.ClusterStatus{})
 }
 
-// ConvertDownSpec ...
-func (*ClusterStatus) ConvertDownSpec() *pkg.KindSpec {
+// ConvertToSpec ...
+func (*ClusterStatus) ConvertToSpec() *pkg.KindSpec {
 	return pkg.NewKindSpec().WithKinds(&ClusterStatus{})
 }
 
 // -------
 
-// ConvertUp ...
-func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
+// ConvertFrom ...
+func (*JoinConfiguration) ConvertFrom(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	new := &JoinConfiguration{}
 	pkg.DeepCopy(new, ink)
@@ -127,8 +127,8 @@ func (*JoinConfiguration) ConvertUp(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.K
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
-// ConvertDown ...
-func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
+// ConvertTo ...
+func (*JoinConfiguration) ConvertTo(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindSpec, error) {
 	ink := in.Kinds[0]
 	cv.AddKindsToCache(ink)
 	new := &v1beta1.JoinConfiguration{}
@@ -136,12 +136,12 @@ func (*JoinConfiguration) ConvertDown(cv *pkg.Converter, in *pkg.KindSpec) (*pkg
 	return pkg.NewKindSpec().WithKinds(new), nil
 }
 
-// ConvertUpSpec ...
-func (*JoinConfiguration) ConvertUpSpec() *pkg.KindSpec {
+// ConvertFromSpec ...
+func (*JoinConfiguration) ConvertFromSpec() *pkg.KindSpec {
 	return pkg.NewKindSpec().WithKinds(&v1beta1.JoinConfiguration{})
 }
 
-// ConvertDownSpec ...
-func (*JoinConfiguration) ConvertDownSpec() *pkg.KindSpec {
+// ConvertToSpec ...
+func (*JoinConfiguration) ConvertToSpec() *pkg.KindSpec {
 	return pkg.NewKindSpec().WithKinds(&JoinConfiguration{})
 }

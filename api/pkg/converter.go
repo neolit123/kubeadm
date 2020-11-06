@@ -217,11 +217,11 @@ convert:
 	for i := start; i != end; i += step {
 		k := kinds[i]
 		if convertUp {
-			convertFunc = k.ConvertUp
-			convertSpecFunc = k.ConvertUpSpec
+			convertFunc = k.ConvertFrom
+			convertSpecFunc = k.ConvertFromSpec
 		} else {
-			convertFunc = k.ConvertDown
-			convertSpecFunc = k.ConvertDownSpec
+			convertFunc = k.ConvertTo
+			convertSpecFunc = k.ConvertToSpec
 		}
 		spec := convertSpecFunc()
 		if !in.EqualKinds(spec) {
