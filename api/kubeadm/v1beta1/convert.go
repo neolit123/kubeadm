@@ -32,12 +32,12 @@ func (*InitConfiguration) ConvertTo(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.K
 
 // ConvertFromSpec ...
 func (*InitConfiguration) ConvertFromSpec() *pkg.KindSpec {
-	return pkg.NewKindSpec().WithKinds(&InitConfiguration{})
+	return pkg.NewKindSpec()
 }
 
 // ConvertToSpec ...
 func (*InitConfiguration) ConvertToSpec() *pkg.KindSpec {
-	return pkg.NewKindSpec().WithKinds(&InitConfiguration{})
+	return pkg.NewKindSpec()
 }
 
 // -------
@@ -54,12 +54,12 @@ func (*ClusterConfiguration) ConvertTo(cv *pkg.Converter, in *pkg.KindSpec) (*pk
 
 // ConvertFromSpec ...
 func (*ClusterConfiguration) ConvertFromSpec() *pkg.KindSpec {
-	return pkg.NewKindSpec().WithKinds(&ClusterConfiguration{})
+	return pkg.NewKindSpec()
 }
 
 // ConvertToSpec ...
 func (*ClusterConfiguration) ConvertToSpec() *pkg.KindSpec {
-	return pkg.NewKindSpec().WithKinds(&ClusterConfiguration{})
+	return pkg.NewKindSpec()
 }
 
 // -------
@@ -76,12 +76,12 @@ func (*ClusterStatus) ConvertTo(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.KindS
 
 // ConvertFromSpec ...
 func (*ClusterStatus) ConvertFromSpec() *pkg.KindSpec {
-	return pkg.NewKindSpec().WithKinds(&ClusterStatus{})
+	return pkg.NewKindSpec()
 }
 
 // ConvertToSpec ...
 func (*ClusterStatus) ConvertToSpec() *pkg.KindSpec {
-	return pkg.NewKindSpec().WithKinds(&ClusterStatus{})
+	return pkg.NewKindSpec()
 }
 
 // -------
@@ -98,10 +98,10 @@ func (*JoinConfiguration) ConvertTo(cv *pkg.Converter, in *pkg.KindSpec) (*pkg.K
 
 // ConvertFromSpec ...
 func (*JoinConfiguration) ConvertFromSpec() *pkg.KindSpec {
-	return pkg.NewKindSpec().WithKinds(&JoinConfiguration{})
+	return pkg.NewKindSpec()
 }
 
 // ConvertToSpec ...
 func (*JoinConfiguration) ConvertToSpec() *pkg.KindSpec {
-	return pkg.NewKindSpec().WithKinds(&JoinConfiguration{})
+	return pkg.NewKindSpec()
 }

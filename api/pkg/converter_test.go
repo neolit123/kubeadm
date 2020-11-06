@@ -165,8 +165,8 @@ func (*testQue) ConvertFrom(cv *Converter, in *KindSpec) (*KindSpec, error) {
 func (*testQue) ConvertTo(cv *Converter, in *KindSpec) (*KindSpec, error) {
 	return in, nil
 }
-func (*testQue) ConvertFromSpec() *KindSpec { return NewKindSpec().WithKinds(&testQue{}) }
-func (*testQue) ConvertToSpec() *KindSpec   { return NewKindSpec().WithKinds(&testQue{}) }
+func (*testQue) ConvertFromSpec() *KindSpec { return NewKindSpec() }
+func (*testQue) ConvertToSpec() *KindSpec   { return NewKindSpec() }
 func (*testQue) Validate() error            { return nil }
 func (*testQue) Default() error             { return nil }
 func (*testQue) GetDefaultTypeMeta() *metav1.TypeMeta {
