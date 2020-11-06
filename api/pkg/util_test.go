@@ -327,103 +327,132 @@ func TestGetTypeMeta(t *testing.T) {
 func TestAPIVersionForComponentVersion(t *testing.T) {
 	testCases := []struct {
 		name            string
-		groups          []Group
-		group           string
-		compVer         string
-		usePreferred    bool
+		spec            *APIVersionSpec
 		expectedVersion *Version
-		lessEq          func(string, string) bool
 		expectedError   bool
 	}{
 		{
 			name: "valid: found valid version without preferred flag",
-			groups: []Group{{Group: "foo", Versions: []Version{
-				{Version: "v1", AddedIn: "v1.14.0", Preferred: false},
-				{Version: "v2", AddedIn: "v1.15.0", Preferred: false},
-				{Version: "v3", AddedIn: "v1.17.0", Preferred: false},
-			}}},
-			group:           "foo",
-			compVer:         "v1.16.0",
+			spec: &APIVersionSpec{
+				Groups: []Group{{Group: "foo", Versions: []Version{
+					{Version: "v1", AddedIn: "v1.14.0", Preferred: false},
+					{Version: "v2", AddedIn: "v1.15.0", Preferred: false},
+					{Version: "v3", AddedIn: "v1.17.0", Preferred: false},
+				}}},
+				Group:   "foo",
+				CompVer: "v1.16.0",
+			},
 			expectedVersion: &Version{Version: "v2", AddedIn: "v1.15.0", Preferred: false},
 		},
 		{
 			name: "valid: found valid version with preferred flag",
-			groups: []Group{{Group: "foo", Versions: []Version{
-				{Version: "v1", AddedIn: "v1.14.0", Preferred: true},
-				{Version: "v2", AddedIn: "v1.15.0", Preferred: false},
-				{Version: "v3", AddedIn: "v1.17.0", Preferred: false},
-			}}},
-			group:           "foo",
-			compVer:         "v1.16.0",
-			usePreferred:    true,
+			spec: &APIVersionSpec{
+				Groups: []Group{{Group: "foo", Versions: []Version{
+					{Version: "v1", AddedIn: "v1.14.0", Preferred: true},
+					{Version: "v2", AddedIn: "v1.15.0", Preferred: false},
+					{Version: "v3", AddedIn: "v1.17.0", Preferred: false},
+				}}},
+				Group:        "foo",
+				CompVer:      "v1.16.0",
+				UsePreferred: true,
+			},
 			expectedVersion: &Version{Version: "v1", AddedIn: "v1.14.0", Preferred: true},
 		},
 		{
 			name: "valid: component version is newer use latest",
-			groups: []Group{{Group: "foo", Versions: []Version{
-				{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
-				{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
-				{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
-			}}},
-			group:           "foo",
-			compVer:         "v1.16.0",
+			spec: &APIVersionSpec{
+				Groups: []Group{{Group: "foo", Versions: []Version{
+					{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
+					{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
+					{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+				}}},
+				Group:   "foo",
+				CompVer: "v1.16.0",
+			},
 			expectedVersion: &Version{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
 		},
 		{
 			name: "valid: component version is newer use latest preferred",
-			groups: []Group{{Group: "foo", Versions: []Version{
-				{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
-				{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
-				{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
-			}}},
-			group:           "foo",
-			usePreferred:    true,
-			compVer:         "v1.16.0",
+			spec: &APIVersionSpec{
+				Groups: []Group{{Group: "foo", Versions: []Version{
+					{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
+					{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
+					{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+				}}},
+				Group:        "foo",
+				UsePreferred: true,
+				CompVer:      "v1.16.0",
+			},
 			expectedVersion: &Version{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
 		},
 		{
 			name: "valid: use custom lessEq",
-			groups: []Group{{Group: "foo", Versions: []Version{
-				{Version: "v1", AddedIn: "v1.11.0", Preferred: false},
-				{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
-				{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
-			}}},
-			group:   "foo",
-			compVer: "v1.11.0",
-			lessEq: func(a string, b string) bool {
-				return a == b
+			spec: &APIVersionSpec{
+				Groups: []Group{{Group: "foo", Versions: []Version{
+					{Version: "v1", AddedIn: "v1.11.0", Preferred: false},
+					{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
+					{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+				}}},
+				Group:   "foo",
+				CompVer: "v1.11.0",
+				LessEq: func(a string, b string) bool {
+					return a == b
+				},
 			},
 			expectedVersion: &Version{Version: "v1", AddedIn: "v1.11.0", Preferred: false},
 		},
 		{
+			name: "valid: passing empty compVer returns latest",
+			spec: &APIVersionSpec{
+				Groups: []Group{{Group: "foo", Versions: []Version{
+					{Version: "v1", AddedIn: "v1.11.0", Preferred: false},
+					{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
+					{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+				}}},
+				Group:   "foo",
+				CompVer: "",
+			},
+			expectedVersion: &Version{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+		},
+		{
+			name:          "invalid: nil spec",
+			expectedError: true,
+		},
+		{
 			name: "invalid: version too old",
-			groups: []Group{{Group: "foo", Versions: []Version{
-				{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
-				{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
-				{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
-			}}},
-			group:         "foo",
-			compVer:       "v1.10.0",
+			spec: &APIVersionSpec{
+				Groups: []Group{{Group: "foo", Versions: []Version{
+					{Version: "v1", AddedIn: "v1.11.0", Preferred: true},
+					{Version: "v2", AddedIn: "v1.12.0", Preferred: false},
+					{Version: "v3", AddedIn: "v1.13.0", Preferred: false},
+				}}},
+				Group:   "foo",
+				CompVer: "v1.10.0",
+			},
 			expectedError: true,
 		},
 		{
-			name:          "invalid: cannot parse compVer",
-			groups:        []Group{{Group: "foo"}},
-			group:         "foo",
-			compVer:       "bar",
+			name: "invalid: cannot parse compVer",
+			spec: &APIVersionSpec{
+				Groups:  []Group{{Group: "foo"}},
+				Group:   "foo",
+				CompVer: "bar",
+			},
 			expectedError: true,
 		},
 		{
-			name:          "invalid: cannot find group",
-			groups:        []Group{{Group: "foo"}},
-			group:         "bar",
+			name: "invalid: cannot find group",
+			spec: &APIVersionSpec{
+				Groups: []Group{{Group: "foo"}},
+				Group:  "bar",
+			},
 			expectedError: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ver, err := APIVersionForComponentVersion(tc.groups, tc.group, tc.compVer, tc.usePreferred, nil)
+			ver, err := APIVersionForComponentVersion(tc.spec)
 			if (err != nil) != tc.expectedError {
 				t.Fatalf("expected error %v, got %v, error: %v", tc.expectedError, err != nil, err)
 			}

@@ -288,25 +288,32 @@ func getVersion(versions []Version, version string) (*Version, int, error) {
 }
 
 // APIVersionForComponentVersion ...
-func APIVersionForComponentVersion(groups []Group, group string, compVer string, usePreferred bool, lessEq func(string, string) bool) (*Version, error) {
-	if lessEq == nil {
-		lessEq = func(a string, b string) bool {
+func APIVersionForComponentVersion(spec *APIVersionSpec) (*Version, error) {
+	if spec == nil {
+		return nil, errors.New("received empty spec")
+	}
+	if spec.LessEq == nil {
+		spec.LessEq = func(a string, b string) bool {
 			return utilversion.MustParseGeneric(a).AtLeast(utilversion.MustParseGeneric(b))
 		}
 	}
-	g, _, err := getGroup(groups, group)
+	g, _, err := getGroup(spec.Groups, spec.Group)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := utilversion.ParseGeneric(compVer); err != nil {
-		return nil, errors.Wrap(err, "cannot parse component version")
+	if len(spec.CompVer) != 0 {
+		if _, err := utilversion.ParseGeneric(spec.CompVer); err != nil {
+			return nil, errors.Wrap(err, "cannot parse component version")
+		}
 	}
 	for i := len(g.Versions) - 1; i > -1; i-- {
 		ver := g.Versions[i]
-		if !lessEq(compVer, ver.AddedIn) {
-			continue
+		if len(spec.CompVer) != 0 {
+			if !spec.LessEq(spec.CompVer, ver.AddedIn) {
+				continue
+			}
 		}
-		if !usePreferred {
+		if !spec.UsePreferred {
 			return &ver, nil
 		}
 		if !ver.Preferred {
@@ -314,7 +321,7 @@ func APIVersionForComponentVersion(groups []Group, group string, compVer string,
 		}
 		return &ver, nil
 	}
-	return nil, errors.Errorf("could not find a supported API version in group %q for component version %q", group, compVer)
+	return nil, errors.Errorf("could not find a supported API version in group %q for component version %q", spec.Group, spec.CompVer)
 }
 
 // IsGroupDeprecated ...

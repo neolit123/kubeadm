@@ -79,3 +79,12 @@ type Converter struct {
 type KindSpec struct {
 	Kinds []Kind
 }
+
+// APIVersionSpec ...
+type APIVersionSpec struct {
+	Groups       []Group
+	Group        string
+	CompVer      string
+	UsePreferred bool
+	LessEq       func(string, string) bool
+}
