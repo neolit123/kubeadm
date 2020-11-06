@@ -351,3 +351,17 @@ func IsVersionPreferred(groups []Group, group, version string) (bool, error) {
 	}
 	return v.Preferred, nil
 }
+
+// GetPreferredVersion ...
+func GetPreferredVersion(groups []Group, group string) (*Version, error) {
+	g, _, err := getGroup(groups, group)
+	if err != nil {
+		return nil, err
+	}
+	for i := range g.Versions {
+		if g.Versions[i].Preferred {
+			return &g.Versions[i], nil
+		}
+	}
+	return nil, errors.Errorf("could not find a preferred version for group %q", group)
+}
