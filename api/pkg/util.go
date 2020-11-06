@@ -274,12 +274,13 @@ func getGroup(groups []Group, group string) (*Group, int, error) {
 	return nil, -1, errors.Errorf("unknown group %q", group)
 }
 
-func getVersion(versions []Version, version string) (*Version, int, error) {
-	if len(versions) == 0 {
-		return nil, -1, errors.New("no versions defined")
+func getVersion(groups []Group, group, version string) (*Version, int, error) {
+	g, _, err := getGroup(groups, group)
+	if err != nil {
+		return nil, -1, err
 	}
-	for i := range versions {
-		v := versions[i]
+	for i := range g.Versions {
+		v := g.Versions[i]
 		if version == v.Version {
 			return &v, i, nil
 		}
@@ -335,11 +336,7 @@ func IsGroupDeprecated(groups []Group, group string) (bool, error) {
 
 // IsVersionDeprecated ...
 func IsVersionDeprecated(groups []Group, group, version string) (bool, error) {
-	g, _, err := getGroup(groups, group)
-	if err != nil {
-		return false, err
-	}
-	v, _, err := getVersion(g.Versions, version)
+	v, _, err := getVersion(groups, group, version)
 	if err != nil {
 		return false, err
 	}
@@ -348,11 +345,7 @@ func IsVersionDeprecated(groups []Group, group, version string) (bool, error) {
 
 // IsVersionPreferred ...
 func IsVersionPreferred(groups []Group, group, version string) (bool, error) {
-	g, _, err := getGroup(groups, group)
-	if err != nil {
-		return false, err
-	}
-	v, _, err := getVersion(g.Versions, version)
+	v, _, err := getVersion(groups, group, version)
 	if err != nil {
 		return false, err
 	}
