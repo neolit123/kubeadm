@@ -53,105 +53,20 @@ var (
 			},
 		},
 	}
-	testFooJSON = []byte(`{"kind": "testFoo", "apiVersion": "testgroup1/v1beta1", "A": "A"}`)
-	testZedJSON = []byte(`{"kind": "testZed", "apiVersion": "testgroup1/v1beta3", "a": "A", "b": "B", "c": "C"}`)
+	testFooJSON                 = []byte(`{"kind": "testFoo", "apiVersion": "testgroup1/v1beta1", "A": "A"}`)
+	testZedJSON                 = []byte(`{"kind": "testZed", "apiVersion": "testgroup1/v1beta3", "a": "A", "b": "B", "c": "C"}`)
+	testDataWithAnnotationCache = []byte(`
+{
+	"kind":"testFoo",
+	"apiVersion":"testgroup1/v1beta1",
+	"a":"foo",
+	"metadata":{
+		"annotations":{
+			"` + ConverterCacheAnnotation + `.testgroup1/v1beta2.testBar2":"{\"kind\":\"testBar2\",\"apiVersion\":\"testgroup1/v1beta2\",\"b\":\"cached\"}"
+		}
+	}
+}`)
 )
-
-func TestReadKind(t *testing.T) {
-	cv := NewConverter().WithGroups(testGroups)
-	kind, err := cv.ReadKind(nil, testZedJSON)
-	if err != nil {
-		t.Fatal(err)
-	}
-	const expected = "&TypeMeta{Kind:testZed,APIVersion:testgroup1/v1beta3,}"
-	new := kind.GetDefaultTypeMeta().String()
-	if new != expected {
-		t.Fatalf("expected typmeta: %s, got %s", expected, new)
-	}
-}
-
-func TestConvertBetweenGroups(t *testing.T) {
-	cv := NewConverter().WithGroups(testGroups)
-
-	// convert from older to newer group
-	typemeta, err := cv.ReadTypeMeta(testZedJSON)
-	if err != nil {
-		t.Fatal(err)
-	}
-	obj, err := cv.ReadKind(typemeta, testZedJSON)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cs := NewKindSpec().WithKinds(obj)
-	cs, err = cv.ConvertTo(cs, testGroup2, "v1")
-	if err != nil {
-		t.Fatalf("failed converting to a newer group: %v", err)
-	}
-	result, err := cv.Marshal(cs.Kinds[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	expectedResult := `{"kind":"testBaz","apiVersion":"testgroup2/v1","a":"A","b":"B","c":"C","d":""}`
-	if expectedResult != string(result) {
-		t.Fatalf("expected result:\n%s\ngot:\n%s", expectedResult, result)
-	}
-
-	// convert from newer to older group
-	typemeta, err = cv.ReadTypeMeta(testFooJSON)
-	if err != nil {
-		t.Fatal(err)
-	}
-	obj, err = cv.ReadKind(typemeta, testFooJSON)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cs = NewKindSpec().WithKinds(obj)
-	cs, err = cv.ConvertTo(cs, testGroup0, "v1")
-	if err != nil {
-		t.Fatalf("failed converting to a older group: %v", err)
-	}
-	result, err = cv.Marshal(cs.Kinds[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-	expectedResult = `{"kind":"testQue","apiVersion":"testgroup0/v1","m":"A"}`
-	if expectedResult != string(result) {
-		t.Fatalf("expected result:\n%s\ngot\n:%s", expectedResult, result)
-	}
-}
-
-func TestConvertTo(t *testing.T) {
-	cv := NewConverter().WithGroups(testGroups)
-
-	typemeta, err := cv.ReadTypeMeta(testZedJSON)
-	if err != nil {
-		t.Fatal(err)
-	}
-	objOriginal, err := cv.ReadKind(typemeta, testZedJSON)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cs := NewKindSpec().WithKinds(objOriginal)
-	cs, err = cv.ConvertToOldest(cs, testGroup1)
-	if err != nil {
-		t.Fatalf("failed converting to oldest: %v", err)
-	}
-
-	expectedFoo := &testFoo{A: "A"}
-	SetDefaultTypeMeta(Kind(expectedFoo))
-	if !reflect.DeepEqual(cs.Kinds[0], expectedFoo) {
-		t.Fatalf("expected oldest:\n%#v\ngot:\n%#v", expectedFoo, cs.Kinds[0])
-	}
-
-	cs, err = cv.ConvertToLatest(cs, testGroup1)
-	if err != nil {
-		t.Fatalf("failed converting to latest: %v", err)
-	}
-	if !reflect.DeepEqual(cs.Kinds[0], objOriginal) {
-		t.Fatalf("expected roundtrip back to latest:\n%#v\ngot:\n%#v", objOriginal, cs.Kinds[0])
-	}
-}
 
 // testQue
 type testQue struct {
@@ -337,6 +252,102 @@ func TestDeleteMetadata(t *testing.T) {
 	expected := []byte(`{"bar":"b","foo":"a"}`)
 	if !bytes.Equal(expected, out) {
 		t.Fatalf("expected:\n%v\ngot:\n%v", expected, out)
+	}
+}
+
+func TestReadKind(t *testing.T) {
+	cv := NewConverter().WithGroups(testGroups)
+	kind, err := cv.ReadKind(nil, testZedJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const expected = "&TypeMeta{Kind:testZed,APIVersion:testgroup1/v1beta3,}"
+	new := kind.GetDefaultTypeMeta().String()
+	if new != expected {
+		t.Fatalf("expected typmeta: %s, got %s", expected, new)
+	}
+}
+
+func TestConvertBetweenGroups(t *testing.T) {
+	cv := NewConverter().WithGroups(testGroups)
+
+	// convert from older to newer group
+	typemeta, err := cv.ReadTypeMeta(testZedJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	obj, err := cv.ReadKind(typemeta, testZedJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs := NewKindSpec().WithKinds(obj)
+	cs, err = cv.ConvertTo(cs, testGroup2, "v1")
+	if err != nil {
+		t.Fatalf("failed converting to a newer group: %v", err)
+	}
+	result, err := cv.Marshal(cs.Kinds[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedResult := `{"kind":"testBaz","apiVersion":"testgroup2/v1","a":"A","b":"B","c":"C","d":""}`
+	if expectedResult != string(result) {
+		t.Fatalf("expected result:\n%s\ngot:\n%s", expectedResult, result)
+	}
+
+	// convert from newer to older group
+	typemeta, err = cv.ReadTypeMeta(testFooJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	obj, err = cv.ReadKind(typemeta, testFooJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs = NewKindSpec().WithKinds(obj)
+	cs, err = cv.ConvertTo(cs, testGroup0, "v1")
+	if err != nil {
+		t.Fatalf("failed converting to a older group: %v", err)
+	}
+	result, err = cv.Marshal(cs.Kinds[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedResult = `{"kind":"testQue","apiVersion":"testgroup0/v1","m":"A"}`
+	if expectedResult != string(result) {
+		t.Fatalf("expected result:\n%s\ngot\n:%s", expectedResult, result)
+	}
+}
+
+func TestConvertTo(t *testing.T) {
+	cv := NewConverter().WithGroups(testGroups)
+
+	typemeta, err := cv.ReadTypeMeta(testZedJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	objOriginal, err := cv.ReadKind(typemeta, testZedJSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cs := NewKindSpec().WithKinds(objOriginal)
+	cs, err = cv.ConvertToOldest(cs, testGroup1)
+	if err != nil {
+		t.Fatalf("failed converting to oldest: %v", err)
+	}
+
+	expectedFoo := &testFoo{A: "A"}
+	SetDefaultTypeMeta(Kind(expectedFoo))
+	if !reflect.DeepEqual(cs.Kinds[0], expectedFoo) {
+		t.Fatalf("expected oldest:\n%#v\ngot:\n%#v", expectedFoo, cs.Kinds[0])
+	}
+
+	cs, err = cv.ConvertToLatest(cs, testGroup1)
+	if err != nil {
+		t.Fatalf("failed converting to latest: %v", err)
+	}
+	if !reflect.DeepEqual(cs.Kinds[0], objOriginal) {
+		t.Fatalf("expected roundtrip back to latest:\n%#v\ngot:\n%#v", objOriginal, cs.Kinds[0])
 	}
 }
 
@@ -554,18 +565,6 @@ func TestAddAnnotationsToCache(t *testing.T) {
 		})
 	}
 }
-
-var testDataWithAnnotationCache = []byte(`
-{
-	"kind":"testFoo",
-	"apiVersion":"testgroup1/v1beta1",
-	"a":"foo",
-	"metadata":{
-		"annotations":{
-			"` + ConverterCacheAnnotation + `.testgroup1/v1beta2.testBar2":"{\"kind\":\"testBar2\",\"apiVersion\":\"testgroup1/v1beta2\",\"b\":\"cached\"}"
-		}
-	}
-}`)
 
 func TestConvertUsingCache(t *testing.T) {
 	cv := NewConverter().WithGroups(testGroups)
