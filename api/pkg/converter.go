@@ -263,6 +263,15 @@ func (cv *Converter) ConvertToOldest(in *KindSpec, targetGroup string) (*KindSpe
 	return cv.ConvertTo(in, targetGroup, oldest.Version)
 }
 
+// ConvertToPreferred ...
+func (cv *Converter) ConvertToPreferred(in *KindSpec, targetGroup string) (*KindSpec, error) {
+	pref, err := GetPreferredVersion(cv.groups, targetGroup)
+	if err != nil {
+		return nil, err
+	}
+	return cv.ConvertTo(in, targetGroup, pref.Version)
+}
+
 // ReadTypeMeta ...
 func (cv *Converter) ReadTypeMeta(input []byte) (*metav1.TypeMeta, error) {
 	typemeta := &metav1.TypeMeta{}
