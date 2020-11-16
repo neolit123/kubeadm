@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"reflect"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -135,6 +134,50 @@ func (cv *Converter) NewKindInstance(typemeta *metav1.TypeMeta) (Kind, error) {
 	return nil, errors.Errorf("no object for %s", typemeta)
 }
 
+func (cv *Converter) convertFromHub(in *KindSpec, targetGroupObj *Group, targetVersion, errorPrefix string) (*KindSpec, error) {
+	for _, v := range targetGroupObj.Versions {
+		for _, k := range v.Kinds {
+			from := k.ConvertFromSpec()
+			if !from.EqualKinds(in) {
+				continue
+			}
+			to := k.ConvertToSpec()
+			gvk := to.Kinds[0].GetDefaultTypeMeta().GroupVersionKind()
+			if gvk.Version == targetVersion {
+				out, err := k.ConvertTo(cv, in)
+				if err != nil {
+					return nil, errors.Wrapf(err, "%s: ConvertFrom() of %T failed", errorPrefix, k)
+				}
+				if len(out.Kinds) == 0 {
+					return nil, errors.Errorf("%s: ConvertFrom() of %T returned empty spec", errorPrefix, k)
+				}
+				return out, nil
+			}
+		}
+	}
+	return nil, errors.Errorf("%s: could not convert from the hub spec %s", errorPrefix, in)
+}
+
+func (cv *Converter) convertToHub(in *KindSpec, targetGroupObj *Group, errorPrefix string) (*KindSpec, error) {
+	for _, v := range targetGroupObj.Versions {
+		for _, k := range v.Kinds {
+			to := k.ConvertToSpec()
+			if !to.EqualKinds(in) {
+				continue
+			}
+			out, err := k.ConvertTo(cv, in)
+			if err != nil {
+				return nil, errors.Wrapf(err, "%s: ConvertTo() of %T failed", errorPrefix, k)
+			}
+			if len(out.Kinds) == 0 {
+				return nil, errors.Errorf("%s: ConvertTo() of %T returned empty spec", errorPrefix, k)
+			}
+			return out, nil
+		}
+	}
+	return nil, errors.Errorf("%s: could not convert from the hub spec %s", errorPrefix, in)
+}
+
 // ConvertTo ...
 func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) (*KindSpec, error) {
 	if err := ValidateKindSpec(in); err != nil {
@@ -144,7 +187,7 @@ func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) 
 		return nil, errors.New("empty input spec")
 	}
 
-	_, targetGroupIdx, err := getGroup(cv.groups, targetGroup)
+	targetGroupObj, targetGroupIdx, err := getGroup(cv.groups, targetGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +197,46 @@ func (cv *Converter) ConvertTo(in *KindSpec, targetGroup, targetVersion string) 
 		return nil, err
 	}
 
+	var errorPrefix = fmt.Sprintf("the converter did not reach %s/%s for input %s",
+		targetGroup, targetVersion, in)
+
+	var hubSpec, out *KindSpec
+	if sourceGroupIdx != targetGroupIdx {
+		goto linearVersions
+	}
+
+	for _, v := range targetGroupObj.Versions {
+		for _, k := range v.Kinds {
+			from := k.ConvertFromSpec()
+			if len(from.Kinds) == 0 {
+				continue
+			}
+			if hubSpec != nil && !from.EqualKinds(hubSpec) {
+				goto linearVersions
+			}
+			hubSpec = from
+		}
+	}
+
+	if in.EqualKinds(hubSpec) {
+		out, err = cv.convertFromHub(in, targetGroupObj, targetVersion, errorPrefix)
+		if err != nil {
+			return nil, err
+		}
+		return out, nil
+	} else {
+		out, err = cv.convertToHub(in, targetGroupObj, errorPrefix)
+		if err != nil {
+			return nil, err
+		}
+		out, err = cv.convertFromHub(out, targetGroupObj, targetVersion, errorPrefix)
+		if err != nil {
+			return nil, err
+		}
+		return out, nil
+	}
+
+linearVersions:
 	var start, end, step int
 	var convertUp bool
 	var convertString string
@@ -239,8 +322,8 @@ convert:
 		}
 	}
 	return nil, errors.Errorf("the converter did not reach %s/%s when %s for input %s: "+
-		"last matching spec: %s, last requested spec: %s, last called convert on: %v",
-		targetGroup, targetVersion, convertString, originalInput, lastSpec, in, reflect.TypeOf(lastKind))
+		"last matching spec: %s, last requested spec: %s, last called convert on %T",
+		targetGroup, targetVersion, convertString, originalInput, lastSpec, in, lastKind)
 }
 
 // ConvertToLatest ...
