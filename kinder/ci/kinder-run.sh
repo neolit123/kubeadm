@@ -36,6 +36,9 @@ SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
 ROOT_PATH="$(readlink -f "${SCRIPT_PATH}/..")"
 WORKFLOW_BUCKET_PATH="${SCRIPT_PATH}/workflows"
 
+# print the go version
+go version
+
 # build kinder
 pushd "${ROOT_PATH}"
 echo "Building kinder..."
